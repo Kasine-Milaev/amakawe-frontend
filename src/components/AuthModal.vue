@@ -94,10 +94,17 @@ const handleTelegramAuth = async () => {
   }
 }
 
-const handleGoogleAuth = () => {
-  const authUrl = authService.getGoogleAuthUrl()
-  // Открываем в том же окне для корректного redirect
-  window.location.href = authUrl
+const handleGoogleAuth = async () => {
+  try {
+    const response = await fetch(`${API_URL}/api/auth/google`)
+    const data = await response.json()
+    
+    if (data.authUrl) {
+      window.location.href = data.authUrl
+    }
+  } catch (error) {
+    console.error('Google auth error:', error)
+  }
 }
 
 const handleVkAuth = () => {

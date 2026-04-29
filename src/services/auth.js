@@ -1,6 +1,4 @@
-import { tg } from '..plugins/telegram'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://amakawe-backendd.vercel.app'
 const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin
 
 export const authService = {
