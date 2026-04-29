@@ -6,14 +6,12 @@
     </div>
 
     <div v-else-if="anime" class="details-container">
-      <!-- Background -->
       <div class="details-background">
         <img :src="getBackgroundUrl(anime)" :alt="getTitle(anime)" class="bg-image" />
         <div class="bg-overlay"></div>
       </div>
 
       <div class="details-content">
-        <!-- Poster Section -->
         <div class="poster-section">
           <div class="poster-wrapper">
             <img :src="getImageUrl(anime.image)" :alt="getTitle(anime)" class="poster" />
@@ -40,8 +38,6 @@
             <span class="rating-votes">из 10</span>
           </div>
         </div>
-
-        <!-- Info Section -->
         <div class="info-section">
           <h1 class="anime-title">{{ getTitle(anime) }}</h1>
           <h2 v-if="anime.title?.native" class="anime-native">{{ anime.title.native }}</h2>
@@ -143,8 +139,6 @@ onMounted(async () => {
   try {
     anime.value = await animeStore.fetchAnimeById(route.params.id)
     console.log('✅ Anime loaded:', anime.value)
-    
-    // Загружаем связи
     if (anime.value.relations && anime.value.relations.length > 0) {
       relations.value = anime.value.relations.map(rel => {
         const node = rel.node
@@ -157,7 +151,7 @@ onMounted(async () => {
           year: node?.seasonYear,
           score: node?.averageScore ? node.averageScore / 10 : null
         }
-      }).filter(r => r.id) // Фильтруем только с валидным ID
+      }).filter(r => r.id)
       console.log('✅ Relations loaded:', relations.value.length)
     }
   } catch (error) {

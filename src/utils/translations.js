@@ -1,4 +1,3 @@
-// Словарь для перевода популярных слов
 const translationDict = {
   'Fire': 'Огонь',
   'Flame': 'Пламя',
@@ -14,13 +13,10 @@ const translationDict = {
   'One': 'Один',
   'Piece': 'Кусок',
   'Naruto': 'Наруто',
-  // Добавляй по мере необходимости
 }
 
 export const translateTitle = (title) => {
   if (!title) return ''
-  
-  // Проверяем словарь
   let translated = title
   Object.keys(translationDict).forEach(eng => {
     const regex = new RegExp(`\\b${eng}\\b`, 'gi')
@@ -31,7 +27,6 @@ export const translateTitle = (title) => {
 }
 
 export const shouldTranslate = (element) => {
-  // Проверяем, есть ли атрибут notranslate
   return !element.closest('[translate="no"]') && 
          !element.closest('.notranslate')
 }

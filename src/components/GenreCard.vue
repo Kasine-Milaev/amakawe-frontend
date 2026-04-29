@@ -1,7 +1,6 @@
 <template>
   <router-link :to="`/genre/${genre.id}`" class="genre-card">
     <div class="genre-image-wrapper">
-      <!-- Фон из первого тайтла -->
       <div 
         v-if="genre.backgroundImage" 
         class="genre-background"
@@ -9,8 +8,6 @@
       >
         <div class="genre-overlay"></div>
       </div>
-      
-      <!-- Заглушка если нет фона -->
       <div v-else class="genre-placeholder">
         <span class="genre-icon">{{ genre.name.charAt(0) }}</span>
         <div class="genre-overlay"></div>

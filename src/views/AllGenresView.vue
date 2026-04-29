@@ -46,7 +46,6 @@ import { useAnimeStore } from '../stores/anime'
 const animeStore = useAnimeStore()
 const loading = ref(true)
 
-// Фильтруем запрещённые жанры
 const filteredGenres = computed(() => {
   const blocked = ['hentai', 'yuri', 'yaoi']
   return animeStore.genres.filter(g => !blocked.includes(g.id.toLowerCase()))
@@ -57,17 +56,16 @@ onMounted(async () => {
     await animeStore.fetchGenres()
   }
   
-  // Загружаем фоны для жанров (кроме запрещённых)
-  const genresToLoad = filteredGenres.value.slice(0, 15) // Первые 15 жанров
+  const genresToLoad = filteredGenres.value.slice(0, 15)
   
   for (let i = 0; i < genresToLoad.length; i++) {
     const genre = genresToLoad[i]
-    
-    // Особые правила для некоторых жанров
     let pageNum = 1
-    if (genre.name === 'Fantasy') pageNum = 2 // Фэнтези - 2й постер
-    if (genre.name === 'Drama') pageNum = 2   // Драма - 2й постер
-    if (genre.name === 'Comedy') pageNum = 3  // Комедия - 3й постер
+    if (genre.name === 'Fantasy') pageNum = 9
+    if (genre.name === 'Drama') pageNum = 6
+    if (genre.name === 'Comedy') pageNum = 3
+    if (genre.name === 'Mystery') pageNum = 5
+    if (genre.name === 'Psychological') pageNum = 7
     
     try {
       const result = await animeStore.getAnimeByGenreWithPage(genre.name, pageNum)
@@ -79,7 +77,7 @@ onMounted(async () => {
       console.warn(`⚠️ Could not load background for ${genre.name}:`, err.message)
     }
     
-    await new Promise(resolve => setTimeout(resolve, 300)) // Небольшая задержка
+    await new Promise(resolve => setTimeout(resolve, 300))
   }
   
   loading.value = false

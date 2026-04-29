@@ -1,6 +1,4 @@
 const API_URL = 'https://graphql.anilist.co'
-
-// Популярное аниме
 export async function fetchPopularAnime(page = 1, perPage = 10) {
   const query = `
     query ($page: Int, $perPage: Int) {
@@ -38,8 +36,6 @@ export async function fetchPopularAnime(page = 1, perPage = 10) {
   const result = await response.json()
   return result.data.Page.media
 }
-
-// Поиск аниме
 export async function searchAnime(searchTerm, page = 1, perPage = 10) {
   const query = `
     query ($page: Int, $perPage: Int, $search: String) {
@@ -135,8 +131,6 @@ export async function getAnimeById(id) {
   const result = await response.json()
   return result.data.Media
 }
-
-// Онгоинг-аниме текущего сезона
 export async function fetchCurrentSeasonAnime(page = 1, perPage = 6) {
   const query = `
     query ($page: Int, $perPage: Int, $season: MediaSeason, $seasonYear: Int) {

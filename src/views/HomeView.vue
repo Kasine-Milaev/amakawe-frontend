@@ -7,10 +7,11 @@
     />
 
     <div class="content-wrapper">
-      <!-- Популярные аниме -->
       <section class="anime-section">
         <div class="section-header">
-          <h2 class="section-title">🔥 Популярные аниме</h2>
+          <h2 class="section-title">
+  <Flame class="section-icon" /> Популярные аниме
+</h2>
           <router-link to="/popular" class="view-all">
             Смотреть всё <ArrowRight class="arrow-icon" />
           </router-link>
@@ -22,12 +23,12 @@
         </div>
         
         <div v-else-if="animeStore.error && animeStore.popular.length === 0" class="empty-section">
-          <p>⚠️ Не удалось загрузить</p>
+          <p><AlertTriangle class="error-icon" /> Не удалось загрузить</p>
           <button @click="retryLoad" class="retry-btn">Попробовать снова</button>
         </div>
         
         <div v-else-if="animeStore.popular.length === 0" class="empty-section">
-          <p>😕 Популярные аниме не найдены</p>
+          <p><FolderX class="empty-icon" /> Популярные аниме не найдены</p>
         </div>
         
         <HeroSlider 
@@ -37,11 +38,11 @@
           :autoPlay="false" 
         />
       </section>
-
-      <!-- Популярные фильмы -->
       <section class="anime-section">
         <div class="section-header">
-          <h2 class="section-title">🎬 Популярные фильмы</h2>
+          <h2 class="section-title">
+  <Film class="section-icon" /> Популярные фильмы
+</h2>
           <router-link to="/type/movie" class="view-all">
             Смотреть всё <ArrowRight class="arrow-icon" />
           </router-link>
@@ -53,7 +54,7 @@
         </div>
         
         <div v-else-if="animeStore.popularMovies.length === 0" class="empty-section">
-          <p>😕 Фильмы не найдены</p>
+          <p><FolderX class="empty-icon" /> Фильмы не найдены</p>
         </div>
         
         <HeroSlider 
@@ -64,11 +65,11 @@
           :autoPlay="false" 
         />
       </section>
-
-      <!-- Популярные сериалы -->
       <section class="anime-section">
         <div class="section-header">
-          <h2 class="section-title">📺 Популярные сериалы</h2>
+          <h2 class="section-title">
+  <Tv class="section-icon" /> Популярные сериалы
+</h2>
           <router-link to="/type/tv" class="view-all">
             Смотреть всё <ArrowRight class="arrow-icon" />
           </router-link>
@@ -80,7 +81,7 @@
         </div>
         
         <div v-else-if="animeStore.popularSeries.length === 0" class="empty-section">
-          <p>😕 Сериалы не найдены</p>
+          <p><FolderX class="empty-icon" /> Сериалы не найдены</p>
         </div>
         
         <HeroSlider 
@@ -91,11 +92,11 @@
           :autoPlay="false" 
         />
       </section>
-
-      <!-- Популярные жанры -->
       <section class="genres-section">
         <div class="section-header">
-          <h2 class="section-title">🏷️ Популярные жанры</h2>
+          <h2 class="section-title">
+  <Tags class="section-icon" /> Популярные жанры
+</h2>
           <router-link to="/genres" class="view-all">
             Смотреть всё <ArrowRight class="arrow-icon" />
           </router-link>
@@ -107,7 +108,7 @@
         </div>
         
         <div v-else-if="animeStore.genres.length === 0" class="empty-section">
-          <p>😕 Жанры не найдены</p>
+          <p><FolderX class="empty-icon" /> Жанры не найдены</p>
         </div>
         
         <div v-else class="genres-grid">
@@ -127,7 +128,7 @@ import { onMounted } from 'vue'
 import { useAnimeStore } from '../stores/anime'
 import HeroSlider from '../components/HeroSlider.vue'
 import GenreCard from '../components/GenreCard.vue'
-import { ArrowRight } from 'lucide-vue-next'
+import { ArrowRight, Flame, Film, Tv, Tags, AlertTriangle, FolderX } from 'lucide-vue-next'
 
 const animeStore = useAnimeStore()
 
@@ -136,7 +137,7 @@ const retryLoad = async () => {
 }
 
 onMounted(async () => {
-  console.log('🏠 HomeView mounted')
+  console.log('HomeView mounted')
   await animeStore.initialize()
   console.log('📦 Store state:', {
     ongoings: animeStore.ongoings.length,
@@ -255,8 +256,6 @@ onMounted(async () => {
 .retry-btn:hover {
   transform: translateY(-2px);
 }
-
-/* MOBILE OPTIMIZATION */
 @media (max-width: 768px) {
   .home-view {
     padding-top: 60px;
@@ -296,6 +295,22 @@ onMounted(async () => {
     padding: 2rem 1rem;
     font-size: 0.95rem;
   }
+}
+.section-icon {
+  width: 24px;
+  height: 24px;
+  color: #667eea;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}
+
+.error-icon,
+.empty-icon {
+  width: 32px;
+  height: 32px;
+  color: #4a5568;
+  margin: 0 auto 0.75rem;
+  display: block;
 }
 
 @media (max-width: 480px) {

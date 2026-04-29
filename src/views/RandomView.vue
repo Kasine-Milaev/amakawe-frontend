@@ -123,7 +123,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Стили из предыдущей версии RandomView */
 .random-view {
   padding-top: 100px;
   min-height: 100vh;

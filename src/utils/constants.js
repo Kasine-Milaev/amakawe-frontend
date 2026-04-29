@@ -18,8 +18,6 @@ export const GENRE_TRANSLATIONS = {
   'Supernatural': 'Сверхъестественное',
   'Thriller': 'Триллер'
 }
-
-// Функция перевода жанров
 export function translateGenres(genres) {
   return genres.map(genre => GENRE_TRANSLATIONS[genre] || genre)
 }

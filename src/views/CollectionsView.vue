@@ -44,8 +44,6 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const loading = ref(true)
 const collections = ref([])
-
-// Пример коллекций (можно загружать с бэкенда)
 const collectionsData = [
   {
     id: 1,
@@ -114,7 +112,6 @@ const collectionsData = [
 ]
 
 const goToCollection = (collection) => {
-  // В будущем можно сделать отдельные страницы коллекций
   router.push({
     path: '/collections',
     query: { id: collection.id }

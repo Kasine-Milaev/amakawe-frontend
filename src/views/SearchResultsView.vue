@@ -74,8 +74,6 @@ const performSearch = async () => {
   
   hasSearched.value = true
   loading.value = true
-  
-  // Обновляем URL
   router.push({
     path: '/search',
     query: { q: searchQuery.value }

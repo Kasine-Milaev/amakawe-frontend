@@ -11,7 +11,6 @@ const graphqlRequest = async (query, variables = {}, cacheKey = null) => {
   if (cacheKey) {
     const cached = cache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log(`📦 Cache hit: ${cacheKey}`)
       return cached.data
     }
   }
@@ -36,9 +35,7 @@ const graphqlRequest = async (query, variables = {}, cacheKey = null) => {
 
     return result
   } catch (error) {
-    console.error('AniList API Error:', error.message)
     if (cacheKey && cache.has(cacheKey)) {
-      console.log(`📦 Returning stale cache: ${cacheKey}`)
       return cache.get(cacheKey).data
     }
     throw error
@@ -207,6 +204,37 @@ const QUERIES = {
         }
       }
     }
+  `,
+  BY_TYPE: `
+    query ($format: MediaFormat, $page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo {
+          total
+          perPage
+          currentPage
+          lastPage
+          hasNextPage
+        }
+        media(type: ANIME, format: $format, sort: POPULARITY_DESC) {
+          id
+          idMal
+          title { romaji, english, native, userPreferred }
+          description(asHtml: false)
+          coverImage { large, medium, extraLarge }
+          bannerImage
+          format
+          status
+          episodes
+          duration
+          seasonYear
+          averageScore
+          popularity
+          genres
+          tags { name, rank }
+          studios(isMain: true) { nodes { name } }
+        }
+      }
+    }
   `
 }
 
@@ -274,6 +302,9 @@ export const useAnimeStore = defineStore('anime', () => {
   const popular = ref([])
   const popularMovies = ref([])
   const popularSeries = ref([])
+  const popularOVA = ref([])
+  const popularONA = ref([])
+  const popularSpecial = ref([])
   const genres = ref([])
   const currentAnime = ref(null)
   const loading = ref(false)
@@ -281,7 +312,6 @@ export const useAnimeStore = defineStore('anime', () => {
   const error = ref(null)
 
   const fetchOngoings = async () => {
-    console.log('🔄 Fetching ongoings...')
     try {
       const result = await graphqlRequest(
         QUERIES.ONGOING,
@@ -289,15 +319,12 @@ export const useAnimeStore = defineStore('anime', () => {
         'ongoings'
       )
       ongoings.value = result?.Page?.media?.map(adaptMedia) || []
-      console.log('✅ On-goings loaded:', ongoings.value.length)
     } catch (err) {
-      console.error('❌ On-goings error:', err.message)
       ongoings.value = []
     }
   }
 
   const fetchPopular = async () => {
-    console.log('🔄 Fetching popular...')
     try {
       const result = await graphqlRequest(
         QUERIES.POPULAR,
@@ -305,55 +332,81 @@ export const useAnimeStore = defineStore('anime', () => {
         'popular'
       )
       popular.value = result?.Page?.media?.map(adaptMedia) || []
-      console.log('✅ Popular loaded:', popular.value.length)
     } catch (err) {
-      console.error('❌ Popular error:', err.message)
       popular.value = []
     }
   }
 
-  // 🔥 ИСПРАВЛЕНО: Используем AniList вместо Jikan
   const fetchPopularMovies = async () => {
-    console.log('🔄 Fetching movies...')
     try {
       const result = await graphqlRequest(
         QUERIES.POPULAR,
         { page: 1, perPage: 50, sort: ['POPULARITY_DESC'] },
         'movies'
       )
-      // Фильтруем только фильмы
       popularMovies.value = result?.Page?.media
         ?.filter(m => m.format === 'MOVIE')
         ?.map(adaptMedia) || []
-      console.log('✅ Movies loaded:', popularMovies.value.length)
     } catch (err) {
-      console.error('❌ Movies error:', err.message)
       popularMovies.value = []
     }
   }
 
-  // 🔥 ИСПРАВЛЕНО: Используем AniList вместо Jikan
   const fetchPopularSeries = async () => {
-    console.log('🔄 Fetching series...')
     try {
       const result = await graphqlRequest(
         QUERIES.POPULAR,
         { page: 1, perPage: 50, sort: ['POPULARITY_DESC'] },
         'series'
       )
-      // Фильтруем только сериалы
       popularSeries.value = result?.Page?.media
         ?.filter(m => m.format === 'TV' || m.format === 'TV_SHORT')
         ?.map(adaptMedia) || []
-      console.log('✅ Series loaded:', popularSeries.value.length)
     } catch (err) {
-      console.error('❌ Series error:', err.message)
       popularSeries.value = []
     }
   }
 
+  const fetchPopularOVA = async () => {
+    try {
+      const result = await graphqlRequest(
+        QUERIES.BY_TYPE,
+        { format: 'OVA', page: 1, perPage: 50 },
+        'ova'
+      )
+      popularOVA.value = result?.Page?.media?.map(adaptMedia) || []
+    } catch (err) {
+      popularOVA.value = []
+    }
+  }
+
+  const fetchPopularONA = async () => {
+    try {
+      const result = await graphqlRequest(
+        QUERIES.BY_TYPE,
+        { format: 'ONA', page: 1, perPage: 50 },
+        'ona'
+      )
+      popularONA.value = result?.Page?.media?.map(adaptMedia) || []
+    } catch (err) {
+      popularONA.value = []
+    }
+  }
+
+  const fetchPopularSpecial = async () => {
+    try {
+      const result = await graphqlRequest(
+        QUERIES.BY_TYPE,
+        { format: 'SPECIAL', page: 1, perPage: 50 },
+        'special'
+      )
+      popularSpecial.value = result?.Page?.media?.map(adaptMedia) || []
+    } catch (err) {
+      popularSpecial.value = []
+    }
+  }
+
   const fetchGenres = async () => {
-    console.log('🔄 Fetching genres...')
     try {
       const result = await graphqlRequest(QUERIES.GENRES, {}, 'genres')
       const allGenres = result?.GenreCollection || []
@@ -381,16 +434,14 @@ export const useAnimeStore = defineStore('anime', () => {
             genre.backgroundImage = firstAnime.bannerImage || firstAnime.coverImage?.large
           }
         } catch (err) {
-          console.warn(`⚠️ Could not load background for ${genre.name}`)
+          console.warn(`Could not load background for ${genre.name}`)
         }
         
         await new Promise(resolve => setTimeout(resolve, 100))
       }
 
       genres.value = filteredGenres
-      console.log('✅ Genres loaded:', genres.value.length)
     } catch (err) {
-      console.error('❌ Genres error:', err.message)
       genres.value = []
     }
   }
@@ -398,19 +449,19 @@ export const useAnimeStore = defineStore('anime', () => {
   const initialize = async () => {
     initialLoading.value = true
     error.value = null
-    console.log('🚀 Initializing store...')
     try {
       await Promise.allSettled([
         fetchPopular(),
         fetchPopularMovies(),
         fetchPopularSeries(),
+        fetchPopularOVA(),
+        fetchPopularONA(),
+        fetchPopularSpecial(),
         fetchGenres()
       ])
       await fetchOngoings()
-      console.log('✅ Store initialized successfully')
     } catch (err) {
       error.value = err.message
-      console.error('❌ Store init error:', err.message)
     } finally {
       initialLoading.value = false
     }
@@ -418,7 +469,6 @@ export const useAnimeStore = defineStore('anime', () => {
 
   const fetchAnimeById = async (id) => {
     loading.value = true
-    console.log(`🔄 Fetching anime by ID: ${id}`)
     try {
       const result = await graphqlRequest(
         QUERIES.BY_ID,
@@ -426,10 +476,8 @@ export const useAnimeStore = defineStore('anime', () => {
         `anime-${id}`
       )
       currentAnime.value = result?.Media ? adaptMedia(result.Media) : null
-      console.log('✅ Anime loaded:', currentAnime.value?.name)
       return currentAnime.value
     } catch (err) {
-      console.error('❌ Fetch anime error:', err.message)
       throw err
     } finally {
       loading.value = false
@@ -438,58 +486,45 @@ export const useAnimeStore = defineStore('anime', () => {
 
   const searchAnime = async (query) => {
     if (!query || query.length < 2) return []
-    console.log(`🔍 Searching: ${query}`)
     try {
       const result = await graphqlRequest(
         QUERIES.SEARCH,
         { search: query, page: 1, perPage: 15 },
         `search-${query}`
       )
-      const results = result?.Page?.media?.map(adaptMedia) || []
-      console.log('✅ Search results:', results.length)
-      return results
+      return result?.Page?.media?.map(adaptMedia) || []
     } catch (err) {
-      console.error('❌ Search error:', err.message)
       return []
     }
   }
 
   const getAnimeByGenre = async (genreName) => {
-    console.log(`🔄 Fetching genre: ${genreName}`)
     try {
       const result = await graphqlRequest(
         QUERIES.BY_GENRE,
         { genre: genreName, page: 1, perPage: 20 },
         `genre-${genreName}`
       )
-      const results = result?.Page?.media?.map(adaptMedia) || []
-      console.log('✅ Genre results:', results.length)
-      return results
+      return result?.Page?.media?.map(adaptMedia) || []
     } catch (err) {
-      console.error('❌ Genre error:', err.message)
       return []
     }
   }
 
   const getAnimeByGenreWithPage = async (genreName, page = 1) => {
-    console.log(`🔄 Fetching genre ${genreName} page ${page}`)
     try {
       const result = await graphqlRequest(
         QUERIES.BY_GENRE,
         { genre: genreName, page: page, perPage: 50 },
         `genre-${genreName}-page-${page}`
       )
-      const results = result?.Page?.media?.map(adaptMedia) || []
-      console.log(`✅ Genre page ${page} results:`, results.length)
-      return results
+      return result?.Page?.media?.map(adaptMedia) || []
     } catch (err) {
-      console.error('❌ Genre page error:', err.message)
       return []
     }
   }
 
   const getRandomAnime = async () => {
-    console.log('🎲 Fetching random anime...')
     try {
       const randomPage = Math.floor(Math.random() * 100) + 1
       const result = await graphqlRequest(
@@ -502,21 +537,16 @@ export const useAnimeStore = defineStore('anime', () => {
       
       if (media.length > 0) {
         const randomIndex = Math.floor(Math.random() * media.length)
-        const anime = media[randomIndex]
-        
-        console.log('✅ Random anime found:', anime.title?.romaji)
-        return adaptMedia(anime)
+        return adaptMedia(media[randomIndex])
       }
       
       return null
     } catch (err) {
-      console.error('❌ Random anime error:', err.message)
       return null
     }
   }
 
   const getAnimeByTypeWithPage = async (format, page = 1) => {
-    console.log(`🔄 Fetching type ${format} page ${page}`)
     try {
       const result = await graphqlRequest(
         QUERIES.POPULAR,
@@ -525,20 +555,17 @@ export const useAnimeStore = defineStore('anime', () => {
       )
       
       const pageInfo = result?.Page?.pageInfo
-      console.log('📊 Page info:', pageInfo)
       
       const filtered = result?.Page?.media
         ?.filter(m => m.format?.toUpperCase() === format.toUpperCase())
         ?.map(adaptMedia) || []
       
-      console.log(`✅ Type ${format} page ${page}:`, filtered.length, 'Total:', pageInfo?.total)
       return {
         anime: filtered,
         hasNextPage: pageInfo?.hasNextPage || false,
         total: pageInfo?.total || 0
       }
     } catch (err) {
-      console.error('❌ Type fetch error:', err.message)
       return {
         anime: [],
         hasNextPage: false,
@@ -548,7 +575,6 @@ export const useAnimeStore = defineStore('anime', () => {
   }
 
   const getPopularWithPage = async (page = 1) => {
-    console.log(`🔄 Fetching popular page ${page}`)
     try {
       const result = await graphqlRequest(
         QUERIES.POPULAR,
@@ -558,15 +584,13 @@ export const useAnimeStore = defineStore('anime', () => {
       
       const pageInfo = result?.Page?.pageInfo
       const results = result?.Page?.media?.map(adaptMedia) || []
-      
-      console.log(`✅ Popular page ${page}:`, results.length, 'Has next:', pageInfo?.hasNextPage)
+    
       return {
         anime: results,
         hasNextPage: pageInfo?.hasNextPage || false,
         total: pageInfo?.total || 0
       }
     } catch (err) {
-      console.error('❌ Popular fetch error:', err.message)
       return {
         anime: [],
         hasNextPage: false,
@@ -580,6 +604,9 @@ export const useAnimeStore = defineStore('anime', () => {
     popular,
     popularMovies,
     popularSeries,
+    popularOVA,
+    popularONA,
+    popularSpecial,
     genres,
     currentAnime,
     loading,
@@ -589,6 +616,9 @@ export const useAnimeStore = defineStore('anime', () => {
     fetchPopular,
     fetchPopularMovies,
     fetchPopularSeries,
+    fetchPopularOVA,
+    fetchPopularONA,
+    fetchPopularSpecial,
     fetchGenres,
     initialize,
     fetchAnimeById,

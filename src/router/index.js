@@ -7,6 +7,11 @@ import SearchResultsView from '../views/SearchResultsView.vue'
 import GenreFilterView from '../views/GenreFilterView.vue'
 import PopularView from '../views/PopularView.vue'
 import AllGenresView from '../views/AllGenresView.vue'
+import TypeView from '../views/TypeView.vue'
+import AboutView from '../views/static/AboutView.vue'
+import RulesView from '../views/static/RulesView.vue'
+import PrivacyView from '../views/static/PrivacyView.vue'
+import ContactsView from '../views/static/ContactsView.vue'
 
 const routes = [
   {
@@ -52,8 +57,28 @@ const routes = [
   {
     path: '/type/:type',
     name: 'type',
-    component: GenreFilterView,
+    component: TypeView,
     props: true
+  },
+  {
+    path: '/about',
+    name: 'about',
+    component: AboutView
+  },
+  {
+    path: '/rules',
+    name: 'rules',
+    component: RulesView
+  },
+  {
+    path: '/privacy',
+    name: 'privacy',
+    component: PrivacyView
+  },
+  {
+    path: '/contacts',
+    name: 'contacts',
+    component: ContactsView
   }
 ]
 

@@ -206,7 +206,6 @@ watch(() => route.fullPath, () => {
 </script>
 
 <style scoped>
-/* Стили из предыдущей версии */
 .genre-filter-view {
   padding-top: 100px;
   min-height: 100vh;

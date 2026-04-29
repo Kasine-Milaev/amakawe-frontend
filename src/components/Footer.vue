@@ -9,14 +9,14 @@
             Смотрите онлайн в высоком качестве.
           </p>
           <div class="footer-social">
-            <a href="#" class="social-link" title="Telegram">
-              <Globe class="icon" />
+            <a href="https://t.me/amakawe_anime_bot" target="_blank" class="social-link" title="Telegram">
+              <Send class="icon" />
             </a>
-            <a href="#" class="social-link" title="VK">
-              <Globe class="icon" />
+            <a href="https://vk.com" target="_blank" class="social-link" title="VK">
+              <Share2 class="icon" />
             </a>
             <a href="#" class="social-link" title="Discord">
-              <Globe class="icon" />
+              <MessageCircle class="icon" />
             </a>
           </div>
         </div>
@@ -38,16 +38,17 @@
             <li><router-link to="/type/movie">Фильмы</router-link></li>
             <li><router-link to="/type/ova">OVA</router-link></li>
             <li><router-link to="/type/ona">ONA</router-link></li>
+            <li><router-link to="/type/special">Спешлы</router-link></li>
           </ul>
         </div>
 
         <div class="footer-section">
           <h4 class="footer-title">Информация</h4>
           <ul class="footer-links">
-            <li><a href="#">О сайте</a></li>
-            <li><a href="#">Правила</a></li>
-            <li><a href="#">Политика конфиденциальности</a></li>
-            <li><a href="#">Контакты</a></li>
+            <li><router-link to="/about">О сайте</router-link></li>
+            <li><router-link to="/rules">Правила</router-link></li>
+            <li><router-link to="/privacy">Политика конфиденциальности</router-link></li>
+            <li><router-link to="/contacts">Контакты</router-link></li>
           </ul>
         </div>
       </div>
@@ -65,7 +66,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Globe } from 'lucide-vue-next'
+import { Send, Share2, MessageCircle } from 'lucide-vue-next'
 
 const currentYear = ref(new Date().getFullYear())
 </script>
