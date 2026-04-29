@@ -1,0 +1,602 @@
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import axios from 'axios'
+
+const API_URL = 'https://graphql.anilist.co'
+
+const cache = new Map()
+const CACHE_TTL = 10 * 60 * 1000
+
+const graphqlRequest = async (query, variables = {}, cacheKey = null) => {
+  if (cacheKey) {
+    const cached = cache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log(`📦 Cache hit: ${cacheKey}`)
+      return cached.data
+    }
+  }
+
+  try {
+    const response = await axios.post(API_URL, { query, variables }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timeout: 15000
+    })
+
+    const result = response.data?.data
+
+    if (cacheKey && result) {
+      cache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now()
+      })
+    }
+
+    return result
+  } catch (error) {
+    console.error('AniList API Error:', error.message)
+    if (cacheKey && cache.has(cacheKey)) {
+      console.log(`📦 Returning stale cache: ${cacheKey}`)
+      return cache.get(cacheKey).data
+    }
+    throw error
+  }
+}
+
+const QUERIES = {
+  POPULAR: `
+    query ($page: Int, $perPage: Int, $sort: [MediaSort]) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo {
+          total
+          perPage
+          currentPage
+          lastPage
+          hasNextPage
+        }
+        media(type: ANIME, sort: $sort, status_not: NOT_YET_RELEASED) {
+          id
+          idMal
+          title { romaji, english, native, userPreferred }
+          description(asHtml: false)
+          coverImage { large, medium, extraLarge }
+          bannerImage
+          format
+          status
+          episodes
+          duration
+          seasonYear
+          averageScore
+          popularity
+          genres
+          tags { name, rank }
+          studios(isMain: true) { nodes { name } }
+        }
+      }
+    }
+  `,
+  ONGOING: `
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo {
+          total
+          perPage
+          currentPage
+          lastPage
+          hasNextPage
+        }
+        media(type: ANIME, status: RELEASING, sort: POPULARITY_DESC) {
+          id
+          idMal
+          title { romaji, english, native, userPreferred }
+          description(asHtml: false)
+          coverImage { large, medium, extraLarge }
+          bannerImage
+          format
+          status
+          episodes
+          duration
+          seasonYear
+          averageScore
+          popularity
+          genres
+          nextAiringEpisode { episode, timeUntilAiring }
+        }
+      }
+    }
+  `,
+  BY_ID: `
+    query ($id: Int) {
+      Media(id: $id, type: ANIME) {
+        id
+        idMal
+        title { romaji, english, native, userPreferred }
+        description(asHtml: false)
+        coverImage { large, medium, extraLarge }
+        bannerImage
+        format
+        status
+        episodes
+        duration
+        seasonYear
+        averageScore
+        popularity
+        genres
+        tags { name, rank }
+        studios(isMain: true) { nodes { name } }
+        relations { edges { node { id, title { userPreferred }, format, coverImage { medium } } relationType } }
+        trailer { id, site, thumbnail }
+        externalLinks { url, site, icon }
+        streamingEpisodes { title, thumbnail, url, site }
+      }
+    }
+  `,
+  SEARCH: `
+    query ($search: String, $page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo {
+          total
+          perPage
+          currentPage
+          lastPage
+          hasNextPage
+        }
+        media(type: ANIME, search: $search, sort: POPULARITY_DESC) {
+          id
+          idMal
+          title { romaji, english, native, userPreferred }
+          description(asHtml: false)
+          coverImage { large, medium }
+          format
+          status
+          episodes
+          seasonYear
+          averageScore
+          genres
+        }
+      }
+    }
+  `,
+  RANDOM: `
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(type: ANIME, status: FINISHED, sort: POPULARITY_DESC) {
+          id
+          idMal
+          title { romaji, english, native, userPreferred }
+          description(asHtml: false)
+          coverImage { large, medium }
+          format
+          episodes
+          seasonYear
+          averageScore
+          genres
+          status
+        }
+      }
+    }
+  `,
+  GENRES: `
+    query {
+      GenreCollection
+    }
+  `,
+  BY_GENRE: `
+    query ($genre: String, $page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo {
+          total
+          perPage
+          currentPage
+          lastPage
+          hasNextPage
+        }
+        media(type: ANIME, genre: $genre, sort: POPULARITY_DESC) {
+          id
+          idMal
+          title { romaji, english, native, userPreferred }
+          coverImage { large, medium, extraLarge }
+          bannerImage
+          format
+          episodes
+          seasonYear
+          averageScore
+          genres
+        }
+      }
+    }
+  `
+}
+
+const adaptMedia = (media) => ({
+  id: media.id,
+  mal_id: media.idMal,
+  name: media.title?.english || media.title?.romaji || media.title?.native || 'Без названия',
+  russian: media.title?.native,
+  title: media.title,
+  description: media.description || 'Описание отсутствует',
+  image: {
+    original: media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium,
+    medium: media.coverImage?.medium,
+    large: media.coverImage?.large,
+    extraLarge: media.coverImage?.extraLarge
+  },
+  poster: media.coverImage,
+  banner: media.bannerImage,
+  score: media.averageScore ? media.averageScore / 10 : null,
+  popularity: media.popularity,
+  episodes: media.episodes,
+  episodes_total: media.episodes,
+  duration: media.duration,
+  year: media.seasonYear,
+  kind: mapFormat(media.format),
+  status: mapStatus(media.status),
+  genres: media.genres || [],
+  tags: media.tags?.map(t => t.name) || [],
+  studios: media.studios?.nodes || [],
+  trailer: media.trailer,
+  externalLinks: media.externalLinks,
+  streamingEpisodes: media.streamingEpisodes,
+  relations: media.relations?.edges?.map(edge => ({
+    node: edge.node,
+    relationType: edge.relationType
+  })) || []
+})
+
+const mapFormat = (format) => {
+  const map = {
+    TV: 'tv',
+    TV_SHORT: 'tv',
+    MOVIE: 'movie',
+    OVA: 'ova',
+    ONA: 'ona',
+    SPECIAL: 'special',
+    MUSIC: 'music'
+  }
+  return map[format] || format?.toLowerCase() || 'unknown'
+}
+
+const mapStatus = (status) => {
+  const map = {
+    RELEASING: 'ongoing',
+    FINISHED: 'completed',
+    NOT_YET_RELEASED: 'announced',
+    CANCELLED: 'cancelled',
+    HIATUS: 'hiatus'
+  }
+  return map[status] || status?.toLowerCase() || 'unknown'
+}
+
+export const useAnimeStore = defineStore('anime', () => {
+  const ongoings = ref([])
+  const popular = ref([])
+  const popularMovies = ref([])
+  const popularSeries = ref([])
+  const genres = ref([])
+  const currentAnime = ref(null)
+  const loading = ref(false)
+  const initialLoading = ref(true)
+  const error = ref(null)
+
+  const fetchOngoings = async () => {
+    console.log('🔄 Fetching ongoings...')
+    try {
+      const result = await graphqlRequest(
+        QUERIES.ONGOING,
+        { page: 1, perPage: 8 },
+        'ongoings'
+      )
+      ongoings.value = result?.Page?.media?.map(adaptMedia) || []
+      console.log('✅ On-goings loaded:', ongoings.value.length)
+    } catch (err) {
+      console.error('❌ On-goings error:', err.message)
+      ongoings.value = []
+    }
+  }
+
+  const fetchPopular = async () => {
+    console.log('🔄 Fetching popular...')
+    try {
+      const result = await graphqlRequest(
+        QUERIES.POPULAR,
+        { page: 1, perPage: 12, sort: ['POPULARITY_DESC'] },
+        'popular'
+      )
+      popular.value = result?.Page?.media?.map(adaptMedia) || []
+      console.log('✅ Popular loaded:', popular.value.length)
+    } catch (err) {
+      console.error('❌ Popular error:', err.message)
+      popular.value = []
+    }
+  }
+
+  // 🔥 ИСПРАВЛЕНО: Используем AniList вместо Jikan
+  const fetchPopularMovies = async () => {
+    console.log('🔄 Fetching movies...')
+    try {
+      const result = await graphqlRequest(
+        QUERIES.POPULAR,
+        { page: 1, perPage: 50, sort: ['POPULARITY_DESC'] },
+        'movies'
+      )
+      // Фильтруем только фильмы
+      popularMovies.value = result?.Page?.media
+        ?.filter(m => m.format === 'MOVIE')
+        ?.map(adaptMedia) || []
+      console.log('✅ Movies loaded:', popularMovies.value.length)
+    } catch (err) {
+      console.error('❌ Movies error:', err.message)
+      popularMovies.value = []
+    }
+  }
+
+  // 🔥 ИСПРАВЛЕНО: Используем AniList вместо Jikan
+  const fetchPopularSeries = async () => {
+    console.log('🔄 Fetching series...')
+    try {
+      const result = await graphqlRequest(
+        QUERIES.POPULAR,
+        { page: 1, perPage: 50, sort: ['POPULARITY_DESC'] },
+        'series'
+      )
+      // Фильтруем только сериалы
+      popularSeries.value = result?.Page?.media
+        ?.filter(m => m.format === 'TV' || m.format === 'TV_SHORT')
+        ?.map(adaptMedia) || []
+      console.log('✅ Series loaded:', popularSeries.value.length)
+    } catch (err) {
+      console.error('❌ Series error:', err.message)
+      popularSeries.value = []
+    }
+  }
+
+  const fetchGenres = async () => {
+    console.log('🔄 Fetching genres...')
+    try {
+      const result = await graphqlRequest(QUERIES.GENRES, {}, 'genres')
+      const allGenres = result?.GenreCollection || []
+      
+      const filteredGenres = allGenres
+        .filter(name => name.toLowerCase() !== 'hentai')
+        .map((name) => ({
+          id: name.toLowerCase().replace(/\s+/g, '-'),
+          name: name,
+          anime_count: 0,
+          backgroundImage: null
+        }))
+
+      for (let i = 0; i < Math.min(filteredGenres.length, 10); i++) {
+        const genre = filteredGenres[i]
+        try {
+          const genreAnime = await graphqlRequest(
+            QUERIES.BY_GENRE,
+            { genre: genre.name, page: 1, perPage: 1 },
+            `genre-bg-${genre.id}`
+          )
+          
+          const firstAnime = genreAnime?.Page?.media?.[0]
+          if (firstAnime) {
+            genre.backgroundImage = firstAnime.bannerImage || firstAnime.coverImage?.large
+          }
+        } catch (err) {
+          console.warn(`⚠️ Could not load background for ${genre.name}`)
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+
+      genres.value = filteredGenres
+      console.log('✅ Genres loaded:', genres.value.length)
+    } catch (err) {
+      console.error('❌ Genres error:', err.message)
+      genres.value = []
+    }
+  }
+
+  const initialize = async () => {
+    initialLoading.value = true
+    error.value = null
+    console.log('🚀 Initializing store...')
+    try {
+      await Promise.allSettled([
+        fetchPopular(),
+        fetchPopularMovies(),
+        fetchPopularSeries(),
+        fetchGenres()
+      ])
+      await fetchOngoings()
+      console.log('✅ Store initialized successfully')
+    } catch (err) {
+      error.value = err.message
+      console.error('❌ Store init error:', err.message)
+    } finally {
+      initialLoading.value = false
+    }
+  }
+
+  const fetchAnimeById = async (id) => {
+    loading.value = true
+    console.log(`🔄 Fetching anime by ID: ${id}`)
+    try {
+      const result = await graphqlRequest(
+        QUERIES.BY_ID,
+        { id: parseInt(id) },
+        `anime-${id}`
+      )
+      currentAnime.value = result?.Media ? adaptMedia(result.Media) : null
+      console.log('✅ Anime loaded:', currentAnime.value?.name)
+      return currentAnime.value
+    } catch (err) {
+      console.error('❌ Fetch anime error:', err.message)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const searchAnime = async (query) => {
+    if (!query || query.length < 2) return []
+    console.log(`🔍 Searching: ${query}`)
+    try {
+      const result = await graphqlRequest(
+        QUERIES.SEARCH,
+        { search: query, page: 1, perPage: 15 },
+        `search-${query}`
+      )
+      const results = result?.Page?.media?.map(adaptMedia) || []
+      console.log('✅ Search results:', results.length)
+      return results
+    } catch (err) {
+      console.error('❌ Search error:', err.message)
+      return []
+    }
+  }
+
+  const getAnimeByGenre = async (genreName) => {
+    console.log(`🔄 Fetching genre: ${genreName}`)
+    try {
+      const result = await graphqlRequest(
+        QUERIES.BY_GENRE,
+        { genre: genreName, page: 1, perPage: 20 },
+        `genre-${genreName}`
+      )
+      const results = result?.Page?.media?.map(adaptMedia) || []
+      console.log('✅ Genre results:', results.length)
+      return results
+    } catch (err) {
+      console.error('❌ Genre error:', err.message)
+      return []
+    }
+  }
+
+  const getAnimeByGenreWithPage = async (genreName, page = 1) => {
+    console.log(`🔄 Fetching genre ${genreName} page ${page}`)
+    try {
+      const result = await graphqlRequest(
+        QUERIES.BY_GENRE,
+        { genre: genreName, page: page, perPage: 50 },
+        `genre-${genreName}-page-${page}`
+      )
+      const results = result?.Page?.media?.map(adaptMedia) || []
+      console.log(`✅ Genre page ${page} results:`, results.length)
+      return results
+    } catch (err) {
+      console.error('❌ Genre page error:', err.message)
+      return []
+    }
+  }
+
+  const getRandomAnime = async () => {
+    console.log('🎲 Fetching random anime...')
+    try {
+      const randomPage = Math.floor(Math.random() * 100) + 1
+      const result = await graphqlRequest(
+        QUERIES.RANDOM,
+        { page: randomPage, perPage: 10 },
+        `random-page-${randomPage}`
+      )
+      
+      const media = result?.Page?.media || []
+      
+      if (media.length > 0) {
+        const randomIndex = Math.floor(Math.random() * media.length)
+        const anime = media[randomIndex]
+        
+        console.log('✅ Random anime found:', anime.title?.romaji)
+        return adaptMedia(anime)
+      }
+      
+      return null
+    } catch (err) {
+      console.error('❌ Random anime error:', err.message)
+      return null
+    }
+  }
+
+  const getAnimeByTypeWithPage = async (format, page = 1) => {
+    console.log(`🔄 Fetching type ${format} page ${page}`)
+    try {
+      const result = await graphqlRequest(
+        QUERIES.POPULAR,
+        { page: page, perPage: 50, sort: ['POPULARITY_DESC'] },
+        `type-${format}-page-${page}`
+      )
+      
+      const pageInfo = result?.Page?.pageInfo
+      console.log('📊 Page info:', pageInfo)
+      
+      const filtered = result?.Page?.media
+        ?.filter(m => m.format?.toUpperCase() === format.toUpperCase())
+        ?.map(adaptMedia) || []
+      
+      console.log(`✅ Type ${format} page ${page}:`, filtered.length, 'Total:', pageInfo?.total)
+      return {
+        anime: filtered,
+        hasNextPage: pageInfo?.hasNextPage || false,
+        total: pageInfo?.total || 0
+      }
+    } catch (err) {
+      console.error('❌ Type fetch error:', err.message)
+      return {
+        anime: [],
+        hasNextPage: false,
+        total: 0
+      }
+    }
+  }
+
+  const getPopularWithPage = async (page = 1) => {
+    console.log(`🔄 Fetching popular page ${page}`)
+    try {
+      const result = await graphqlRequest(
+        QUERIES.POPULAR,
+        { page: page, perPage: 50, sort: ['POPULARITY_DESC'] },
+        `popular-page-${page}`
+      )
+      
+      const pageInfo = result?.Page?.pageInfo
+      const results = result?.Page?.media?.map(adaptMedia) || []
+      
+      console.log(`✅ Popular page ${page}:`, results.length, 'Has next:', pageInfo?.hasNextPage)
+      return {
+        anime: results,
+        hasNextPage: pageInfo?.hasNextPage || false,
+        total: pageInfo?.total || 0
+      }
+    } catch (err) {
+      console.error('❌ Popular fetch error:', err.message)
+      return {
+        anime: [],
+        hasNextPage: false,
+        total: 0
+      }
+    }
+  }
+
+  return {
+    ongoings,
+    popular,
+    popularMovies,
+    popularSeries,
+    genres,
+    currentAnime,
+    loading,
+    initialLoading,
+    error,
+    fetchOngoings,
+    fetchPopular,
+    fetchPopularMovies,
+    fetchPopularSeries,
+    fetchGenres,
+    initialize,
+    fetchAnimeById,
+    searchAnime,
+    getAnimeByGenre,
+    getAnimeByGenreWithPage,
+    getRandomAnime,
+    getAnimeByTypeWithPage,
+    getPopularWithPage
+  }
+})
