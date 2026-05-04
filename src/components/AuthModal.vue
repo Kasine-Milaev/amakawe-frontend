@@ -188,6 +188,7 @@ const resetForm = () => {
   loading.value = false
   error.value = ''
   resendTimer.value = 0
+  localStorage.removeItem('verification_token')
 }
 
 const handleTelegramAuth = async () => {
@@ -248,13 +249,11 @@ const requestCode = async () => {
     const data = await response.json()
     
     if (data.success) {
+      localStorage.setItem('verification_token', data.verificationToken)
+      
       step.value = 'code'
       resendTimer.value = 60
       startResendTimer()
-      
-      if (data.code) {
-        code.value = data.code
-      }
     } else {
       error.value = data.error || 'Не удалось отправить код'
     }
@@ -279,15 +278,23 @@ const verifyCode = async () => {
   error.value = ''
   
   try {
+    const verificationToken = localStorage.getItem('verification_token')
+    
     const response = await fetch(`${API_URL}/api/auth/email/verify-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.value, code: code.value })
+      body: JSON.stringify({
+        email: email.value,
+        code: code.value,
+        verificationToken
+      })
     })
     
     const data = await response.json()
     
     if (data.success && data.verified) {
+      localStorage.removeItem('verification_token')
+      
       if (data.needsRegistration) {
         step.value = 'register'
       } else if (data.token) {
