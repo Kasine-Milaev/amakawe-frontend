@@ -7,37 +7,141 @@
           
           <h2 class="modal-title">Вход в Amakawe</h2>
           <p class="modal-subtitle">Выберите способ входа</p>
-          <div class="auth-buttons">
-            <button 
-              v-if="isTelegram" 
-              class="auth-btn telegram" 
-              @click="handleTelegramAuth"
-            >
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
-              </svg>
-              <span>Telegram</span>
+          
+          <div v-if="step === 'method'" class="auth-methods">
+            <button class="auth-btn email" @click="step = 'email'">
+              <Mail class="btn-icon" />
+              <span>Через Email</span>
             </button>
-            <button class="auth-btn google" @click="handleGoogleAuth">
-              <svg class="btn-icon" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              <span>Google</span>
-            </button>
-            <button class="auth-btn vk" @click="handleVkAuth">
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M15.684 0H8.316C1.592 0 0 1.592 0 8.316v7.368C0 22.408 1.592 24 8.316 24h7.368C22.408 24 24 22.408 24 15.684V8.316C24 1.592 22.408 0 15.684 0zm3.692 13.104h-1.596c-.408 0-.532.192-.628.456-.1.264-1.084 1.224-1.404 1.544-.232.232-.42.284-.68.144-.784-.44-2.628-1.804-3.732-3.312-.72-.984-.44-1.416.264-2.136.184-.188 3.348-3.052 3.4-3.308.032-.152-.024-.224-.064-.224-.096 0-1.836 1.168-5.2 3.44-.492.336-.936.504-1.328.492-.444-.012-1.284-.248-1.908-.456-.772-.256-1.38-.384-1.332-.812.032-.224.332-.448.912-.68 3.588-1.56 5.976-2.592 7.172-3.088 3.42-1.424 4.12-1.672 4.588-1.672.1 0 .328.028.48.152.124.1.16.232.172.332-.012.076.012.296-.004.464z"/>
-              </svg>
-              <span>VK</span>
+            
+            <button class="auth-btn telegram" @click="handleTelegramAuth">
+              <Send class="btn-icon" />
+              <span>Через Telegram</span>
             </button>
           </div>
           
-          <p class="auth-note">
-            Нажимая на кнопку, вы соглашаетесь с <a href="#">условиями использования</a>
-          </p>
+          <div v-if="step === 'email'" class="auth-form">
+            <button class="back-btn" @click="step = 'method'">
+              <ArrowLeft class="btn-icon" /> Назад
+            </button>
+            
+            <div class="form-group">
+              <label>Email</label>
+              <input
+                v-model="email"
+                type="email"
+                placeholder="your@email.com"
+                :disabled="loading"
+              />
+            </div>
+            
+            <button 
+              class="submit-btn" 
+              @click="requestCode"
+              :disabled="loading || !email"
+            >
+              {{ loading ? 'Отправка...' : 'Получить код' }}
+            </button>
+          </div>
+          
+          <div v-if="step === 'code'" class="auth-form">
+            <button class="back-btn" @click="step = 'email'">
+              <ArrowLeft class="btn-icon" /> Назад
+            </button>
+            
+            <p class="form-hint">Код отправлен на {{ email }}</p>
+            
+            <div class="form-group">
+              <label>Код подтверждения</label>
+              <input
+                v-model="code"
+                type="text"
+                placeholder="123456"
+                maxlength="6"
+                :disabled="loading"
+                class="code-input"
+              />
+            </div>
+            
+            <button 
+              class="submit-btn" 
+              @click="verifyCode"
+              :disabled="loading || !code"
+            >
+              {{ loading ? 'Проверка...' : 'Подтвердить' }}
+            </button>
+            
+            <button class="resend-btn" @click="requestCode" :disabled="resendTimer > 0">
+              {{ resendTimer > 0 ? `Отправить повторно (${resendTimer}s)` : 'Отправить код снова' }}
+            </button>
+          </div>
+          
+          <div v-if="step === 'register'" class="auth-form">
+            <button class="back-btn" @click="step = 'email'">
+              <ArrowLeft class="btn-icon" /> Назад
+            </button>
+            
+            <p class="form-hint">Создайте аккаунт</p>
+            
+            <div class="form-group">
+              <label>Имя пользователя</label>
+              <input
+                v-model="username"
+                type="text"
+                placeholder="username"
+                :disabled="loading"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label>Пароль</label>
+              <input
+                v-model="password"
+                type="password"
+                placeholder="Минимум 6 символов"
+                :disabled="loading"
+              />
+            </div>
+            
+            <button 
+              class="submit-btn" 
+              @click="register"
+              :disabled="loading || !password"
+            >
+              {{ loading ? 'Создание...' : 'Создать аккаунт' }}
+            </button>
+          </div>
+          
+          <div v-if="step === 'login'" class="auth-form">
+            <button class="back-btn" @click="step = 'email'">
+              <ArrowLeft class="btn-icon" /> Назад
+            </button>
+            
+            <p class="form-hint">Введите пароль</p>
+            
+            <div class="form-group">
+              <label>Пароль</label>
+              <input
+                v-model="password"
+                type="password"
+                placeholder="Ваш пароль"
+                :disabled="loading"
+              />
+            </div>
+            
+            <button 
+              class="submit-btn" 
+              @click="login"
+              :disabled="loading || !password"
+            >
+              {{ loading ? 'Вход...' : 'Войти' }}
+            </button>
+          </div>
+          
+          <div v-if="error" class="error-message">
+            <AlertCircle class="error-icon" />
+            {{ error }}
+          </div>
         </div>
       </div>
     </Transition>
@@ -46,29 +150,56 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { Mail, Send, ArrowLeft, AlertCircle } from 'lucide-vue-next'
 import { tg } from '../plugins/telegram'
-import { authService } from '../services/auth'
 
 const props = defineProps({
   modelValue: Boolean
 })
 const emit = defineEmits(['update:modelValue', 'authenticated'])
 
-const router = useRouter()
+const API_URL = import.meta.env.VITE_API_URL || 'https://amakawe-backendd.vercel.app'
+
 const show = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
 })
 
-const isTelegram = computed(() => !!tg?.initDataUnsafe?.user)
-
 const close = () => {
   show.value = false
+  resetForm()
+}
+
+const step = ref('method')
+const email = ref('')
+const code = ref('')
+const username = ref('')
+const password = ref('')
+const loading = ref(false)
+const error = ref('')
+const resendTimer = ref(0)
+
+const resetForm = () => {
+  step.value = 'method'
+  email.value = ''
+  code.value = ''
+  username.value = ''
+  password.value = ''
+  loading.value = false
+  error.value = ''
+  resendTimer.value = 0
 }
 
 const handleTelegramAuth = async () => {
-  if (tg?.initDataUnsafe?.user) {
+  if (!tg?.initDataUnsafe?.user) {
+    error.value = 'Откройте в Telegram для авторизации'
+    return
+  }
+  
+  loading.value = true
+  error.value = ''
+  
+  try {
     const userData = {
       id: tg.initDataUnsafe.user.id,
       username: tg.initDataUnsafe.user.username,
@@ -80,66 +211,192 @@ const handleTelegramAuth = async () => {
       hash: tg.initData?.split('hash=')[1]
     }
     
-    const result = await authService.telegramAuth(userData)
-    if (result.success) {
-      emit('authenticated', result.user)
-      close()
-    }
-  }
-}
-
-const handleGoogleAuth = async () => {
-  try {
-    const response = await fetch(`${API_URL}/api/auth/google`)
+    const response = await fetch(`${API_URL}/api/auth/telegram`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    })
+    
     const data = await response.json()
     
-    if (data.authUrl) {
-      window.location.href = data.authUrl
+    if (data.token) {
+      localStorage.setItem('auth_token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      emit('authenticated', data.user)
+      close()
+    } else {
+      error.value = data.error || 'Ошибка авторизации'
     }
-  } catch (error) {
-    console.error('Google auth error:', error)
+  } catch (err) {
+    error.value = 'Ошибка подключения к серверу'
+  } finally {
+    loading.value = false
   }
 }
 
-const handleVkAuth = () => {
-  const authUrl = authService.getVkAuthUrl()
-  window.location.href = authUrl
+const requestCode = async () => {
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const response = await fetch(`${API_URL}/api/auth/email/request-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.value })
+    })
+    
+    const data = await response.json()
+    
+    if (data.success) {
+      step.value = 'code'
+      resendTimer.value = 60
+      startResendTimer()
+      
+      if (data.code) {
+        code.value = data.code
+      }
+    } else {
+      error.value = data.error || 'Не удалось отправить код'
+    }
+  } catch (err) {
+    error.value = 'Ошибка подключения к серверу'
+  } finally {
+    loading.value = false
+  }
+}
+
+const startResendTimer = () => {
+  const interval = setInterval(() => {
+    resendTimer.value--
+    if (resendTimer.value <= 0) {
+      clearInterval(interval)
+    }
+  }, 1000)
+}
+
+const verifyCode = async () => {
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const response = await fetch(`${API_URL}/api/auth/email/verify-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.value, code: code.value })
+    })
+    
+    const data = await response.json()
+    
+    if (data.success && data.verified) {
+      if (data.needsRegistration) {
+        step.value = 'register'
+      } else if (data.token) {
+        localStorage.setItem('auth_token', data.token)
+        localStorage.setItem('user', JSON.stringify(data.user))
+        emit('authenticated', data.user)
+        close()
+      } else {
+        step.value = 'login'
+      }
+    } else {
+      error.value = data.error || 'Неверный код'
+    }
+  } catch (err) {
+    error.value = 'Ошибка подключения к серверу'
+  } finally {
+    loading.value = false
+  }
+}
+
+const register = async () => {
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const response = await fetch(`${API_URL}/api/auth/email/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value,
+        username: username.value || email.value.split('@')[0]
+      })
+    })
+    
+    const data = await response.json()
+    
+    if (data.token) {
+      localStorage.setItem('auth_token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      emit('authenticated', data.user)
+      close()
+    } else {
+      error.value = data.error || 'Не удалось создать аккаунт'
+    }
+  } catch (err) {
+    error.value = 'Ошибка подключения к серверу'
+  } finally {
+    loading.value = false
+  }
+}
+
+const login = async () => {
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const response = await fetch(`${API_URL}/api/auth/email/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value
+      })
+    })
+    
+    const data = await response.json()
+    
+    if (data.token) {
+      localStorage.setItem('auth_token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      emit('authenticated', data.user)
+      close()
+    } else {
+      error.value = data.error || 'Неверный email или пароль'
+    }
+  } catch (err) {
+    error.value = 'Ошибка подключения к серверу'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
 <style scoped>
 .auth-modal-overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 3000;
+  z-index: 2000;
   padding: 1rem;
 }
 
 .auth-modal {
   background: rgba(20, 20, 35, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 2rem;
-  max-width: 400px;
+  border-radius: 16px;
   width: 100%;
+  max-width: 420px;
+  padding: 2rem;
   position: relative;
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 .close-btn {
@@ -148,16 +405,16 @@ const handleVkAuth = () => {
   right: 1rem;
   background: transparent;
   border: none;
-  color: #a0aec0;
+  color: #718096;
   font-size: 1.5rem;
   cursor: pointer;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .close-btn:hover {
@@ -174,17 +431,16 @@ const handleVkAuth = () => {
 }
 
 .modal-subtitle {
-  margin: 0 0 2rem 0;
+  margin: 0 0 1.5rem 0;
   color: #718096;
   text-align: center;
   font-size: 0.95rem;
 }
 
-.auth-buttons {
+.auth-methods {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 0.75rem;
 }
 
 .auth-btn {
@@ -194,52 +450,168 @@ const handleVkAuth = () => {
   gap: 0.75rem;
   padding: 1rem;
   border-radius: 12px;
-  border: none;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
   color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
 .auth-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-.auth-btn.telegram {
-  background: linear-gradient(135deg, #0088cc, #00aadd);
+.auth-btn.email:hover {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.15);
 }
 
-.auth-btn.google {
-  background: #fff;
-  color: #333;
-}
-
-.auth-btn.vk {
-  background: linear-gradient(135deg, #0077ff, #0088ff);
+.auth-btn.telegram:hover {
+  border-color: #0088cc;
+  background: rgba(0, 136, 204, 0.15);
 }
 
 .btn-icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
-.auth-note {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #4a5568;
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #718096;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  margin-left: -0.5rem;
+  transition: color 0.2s;
+}
+
+.back-btn:hover {
+  color: #fff;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  color: #a0aec0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.form-group input {
+  padding: 0.875rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #fff;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.form-group input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.code-input {
   text-align: center;
-  line-height: 1.5;
+  font-size: 1.25rem;
+  letter-spacing: 0.5rem;
+  font-weight: 700;
 }
 
-.auth-note a {
+.form-hint {
+  color: #718096;
+  font-size: 0.9rem;
+  text-align: center;
+  margin: 0;
+}
+
+.submit-btn {
+  padding: 1rem;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 0.5rem;
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.resend-btn {
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #718096;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.resend-btn:hover:not(:disabled) {
   color: #667eea;
-  text-decoration: none;
+  border-color: #667eea;
 }
 
-.auth-note a:hover {
-  text-decoration: underline;
+.resend-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  color: #fca5a5;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+
+.error-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .modal-enter-active,
@@ -250,5 +622,25 @@ const handleVkAuth = () => {
 .modal-enter-from,
 .modal-leave-to {
   opacity: 0;
+}
+
+.modal-enter-active .auth-modal,
+.modal-leave-active .auth-modal {
+  transition: transform 0.3s ease;
+}
+
+.modal-enter-from .auth-modal,
+.modal-leave-to .auth-modal {
+  transform: scale(0.95) translateY(-10px);
+}
+
+@media (max-width: 480px) {
+  .auth-modal {
+    padding: 1.5rem;
+  }
+  
+  .modal-title {
+    font-size: 1.3rem;
+  }
 }
 </style>
