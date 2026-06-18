@@ -12,6 +12,7 @@ import AboutView from '../views/static/AboutView.vue'
 import RulesView from '../views/static/RulesView.vue'
 import PrivacyView from '../views/static/PrivacyView.vue'
 import ContactsView from '../views/static/ContactsView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const routes = [
   {
@@ -79,6 +80,17 @@ const routes = [
     path: '/contacts',
     name: 'contacts',
     component: ContactsView
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: ProfileView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile/:id',
+    name: 'profile-public',
+    component: ProfileView
   }
 ]
 
@@ -91,6 +103,16 @@ const router = createRouter({
     } else {
       return { top: 0 }
     }
+  }
+})
+
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('auth_token')
+  
+  if (to.meta.requiresAuth && !token) {
+    next('/auth')
+  } else {
+    next()
   }
 })
 
