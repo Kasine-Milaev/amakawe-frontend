@@ -250,15 +250,18 @@ const requestCode = async () => {
     
     if (data.success) {
       localStorage.setItem('verification_token', data.verificationToken)
+      localStorage.setItem('verification_email', email.value)
       
       step.value = 'code'
       resendTimer.value = 60
       startResendTimer()
     } else {
       error.value = data.error || 'Не удалось отправить код'
+      console.error('Request code error:', data.error)
     }
   } catch (err) {
     error.value = 'Ошибка подключения к серверу'
+    console.error('Request code exception:', err)
   } finally {
     loading.value = false
   }
@@ -279,12 +282,13 @@ const verifyCode = async () => {
   
   try {
     const verificationToken = localStorage.getItem('verification_token')
+    const email = localStorage.getItem('verification_email') || email.value
     
     const response = await fetch(`${API_URL}/api/auth/email/verify-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: email.value,
+        email: email,
         code: code.value,
         verificationToken
       })
@@ -294,6 +298,7 @@ const verifyCode = async () => {
     
     if (data.success && data.verified) {
       localStorage.removeItem('verification_token')
+      localStorage.removeItem('verification_email')
       
       if (data.needsRegistration) {
         step.value = 'register'
@@ -303,13 +308,14 @@ const verifyCode = async () => {
         emit('authenticated', data.user)
         close()
       } else {
-        step.value = 'login'
+        error.value = 'Неизвестная ошибка'
       }
     } else {
       error.value = data.error || 'Неверный код'
     }
   } catch (err) {
     error.value = 'Ошибка подключения к серверу'
+    console.error('Verify code exception:', err)
   } finally {
     loading.value = false
   }
