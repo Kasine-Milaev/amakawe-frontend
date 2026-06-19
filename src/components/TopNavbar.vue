@@ -60,21 +60,21 @@
         </button>
         
         <div class="user-profile">
-          <button v-if="!currentUser" class="login-btn" @click="showAuth = true">
-            <LogIn class="avatar-icon" />
-            <span class="login-text">Войти</span>
-          </button>
-          
-          <div v-else class="user-avatar-wrapper">
-            <div class="avatar" v-if="currentUser.photo_url">
-              <img :src="currentUser.photo_url" :alt="currentUser.username" class="avatar-img" />
-            </div>
-            <div class="avatar" v-else>
-              <User class="avatar-icon" />
-            </div>
-            <span v-if="currentUser.username" class="username">@{{ currentUser.username }}</span>
-          </div>
-        </div>
+  <button v-if="!currentUser" class="login-btn" @click="showAuth = true">
+    <LogIn class="avatar-icon" />
+    <span class="login-text">Войти</span>
+  </button>
+  
+  <router-link v-else to="/profile" class="user-avatar-wrapper">
+    <div class="avatar" v-if="currentUser.photo_url">
+      <img :src="currentUser.photo_url" :alt="currentUser.username" class="avatar-img" />
+    </div>
+    <div class="avatar" v-else>
+      <User class="avatar-icon" />
+    </div>
+    <span v-if="currentUser.username" class="username">@{{ currentUser.username }}</span>
+  </router-link>
+</div>
       </div>
     </div>
 
