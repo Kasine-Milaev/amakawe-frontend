@@ -8,26 +8,26 @@
       <div class="profile-header">
         <div class="avatar-container">
           <img 
-            :src="user.avatar || 'https://ui-avatars.com/api/?name=' + (user.username || 'User') + '&background=667eea&color=fff&size=200'" 
+            :src="userAvatar" 
             :alt="user.username"
             class="avatar"
           />
-          <button v-if="isOwnProfile" class="edit-avatar-btn" @click="showAvatarModal = true">
+          <button v-if="isOwnProfile" class="edit-avatar-btn" @click="showAvatarCropper = true">
             <Camera class="icon" />
           </button>
         </div>
         
         <div class="profile-info">
           <h1 class="username">{{ user.username || 'Аноним' }}</h1>
-          <p v-if="user.first_name" class="real-name">{{ user.first_name }} {{ user.last_name }}</p>
+          <p v-if="user.email" class="user-email">{{ user.email }}</p>
           
           <div class="profile-stats">
             <div class="stat">
-              <span class="stat-value">{{ user.rating }}</span>
+              <span class="stat-value">{{ user.rating || 0 }}</span>
               <span class="stat-label">Рейтинг</span>
             </div>
             <div class="stat">
-              <span class="stat-value">{{ user.anime_count }}</span>
+              <span class="stat-value">{{ user.anime_count || 0 }}</span>
               <span class="stat-label">Аниме</span>
             </div>
             <div class="stat">
@@ -41,10 +41,6 @@
               <Calendar class="icon" />
               {{ formatDate(user.created_at) }}
             </span>
-            <span class="meta-item" :title="user.last_login">
-              <Clock class="icon" />
-              {{ formatRelativeTime(user.last_login) }}
-            </span>
           </div>
         </div>
         
@@ -52,10 +48,6 @@
           <button class="btn btn-secondary" @click="showEditModal = true">
             <Edit2 class="icon" />
             Редактировать
-          </button>
-          <button class="btn btn-secondary" @click="showSettingsModal = true">
-            <Settings class="icon" />
-            Настройки
           </button>
         </div>
       </div>
@@ -83,13 +75,6 @@
             >
               <List class="icon" />
               Списки
-            </button>
-            <button 
-              :class="['nav-item', { active: activeTab === 'favorites' }]"
-              @click="activeTab = 'favorites'"
-            >
-              <Star class="icon" />
-              Избранное
             </button>
           </nav>
         </div>
@@ -185,42 +170,12 @@
                   </span>
                 </div>
               </div>
-              
-              <div class="list-card">
-                <div class="list-header">
-                  <XCircle class="icon" />
-                  <h3>Заброшено</h3>
-                  <span class="list-count">{{ activity.animeLists?.dropped?.length || 0 }}</span>
-                </div>
-                <div class="list-items">
-                  <span v-for="id in (activity.animeLists?.dropped || []).slice(0, 5)" :key="id" class="list-item">
-                    #{{ id }}
-                  </span>
-                  <span v-if="(activity.animeLists?.dropped || []).length > 5" class="list-more">
-                    +{{ (activity.animeLists?.dropped || []).length - 5 }} ещё
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div v-if="activeTab === 'favorites'" class="tab-content">
-            <h2 class="tab-title">Избранное</h2>
-            <div v-if="user.favorites && user.favorites.length > 0" class="favorites-grid">
-              <div v-for="id in user.favorites" :key="id" class="favorite-item">
-                #{{ id }}
-              </div>
-            </div>
-            <div v-else class="empty-state">
-              <Star class="icon" />
-              <p>Пока нет избранных аниме</p>
             </div>
           </div>
         </div>
       </div>
     </div>
     
-    <!-- Edit Profile Modal -->
     <div v-if="showEditModal" class="modal-overlay" @click="showEditModal = false">
       <div class="modal" @click.stop>
         <h2>Редактировать профиль</h2>
@@ -241,42 +196,10 @@
       </div>
     </div>
     
-    <!-- Avatar Modal -->
-    <div v-if="showAvatarModal" class="modal-overlay" @click="showAvatarModal = false">
-      <div class="modal" @click.stop>
-        <h2>Изменить аватар</h2>
-        <div class="form-group">
-          <label>URL аватара</label>
-          <input v-model="editForm.avatar" type="url" placeholder="https://..." />
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showAvatarModal = false">Отмена</button>
-          <button class="btn btn-primary" @click="updateAvatar" :disabled="loading">
-            {{ loading ? 'Сохранение...' : 'Сохранить' }}
-          </button>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Settings Modal -->
-    <div v-if="showSettingsModal" class="modal-overlay" @click="showSettingsModal = false">
-      <div class="modal" @click.stop>
-        <h2>Настройки</h2>
-        <div class="form-group">
-          <label>Фон профиля (URL)</label>
-          <input v-model="editForm.banner" type="url" placeholder="https://..." />
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showSettingsModal = false">Отмена</button>
-          <button class="btn btn-primary" @click="updateBanner" :disabled="loading">
-            {{ loading ? 'Сохранение...' : 'Сохранить' }}
-          </button>
-          <button class="btn btn-danger" @click="logout">
-            Выйти
-          </button>
-        </div>
-      </div>
-    </div>
+    <AvatarCropper 
+      v-model:show="showAvatarCropper"
+      @uploaded="handleAvatarUploaded"
+    />
   </div>
 </template>
 
@@ -284,10 +207,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { 
-  Camera, Edit2, Settings, User, Activity, List, Star, 
+  Camera, Edit2, User, Activity, List, 
   Calendar, Clock, Tv, CheckCircle, XCircle, PlayCircle, 
   PauseCircle
 } from 'lucide-vue-next'
+import AvatarCropper from '../components/AvatarCropper.vue'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://amakawe-backendd.vercel.app'
 
@@ -297,19 +221,23 @@ const activity = ref({})
 const loading = ref(false)
 const activeTab = ref('about')
 const isOwnProfile = ref(false)
-
 const showEditModal = ref(false)
-const showAvatarModal = ref(false)
-const showSettingsModal = ref(false)
+const showAvatarCropper = ref(false)
 
 const editForm = ref({
   username: '',
-  bio: '',
-  avatar: '',
-  banner: ''
+  bio: ''
 })
 
 const userId = computed(() => route.params.id)
+
+const userAvatar = computed(() => {
+  if (user.value.avatar) return user.value.avatar
+  if (user.value.username) {
+    return `https://ui-avatars.com/api/?name=${user.value.username}&background=667eea&color=fff&size=200`
+  }
+  return `https://ui-avatars.com/api/?name=Anonymous&background=667eea&color=fff&size=200`
+})
 
 const fetchProfile = async () => {
   try {
@@ -327,9 +255,7 @@ const fetchProfile = async () => {
       user.value = data.user
       editForm.value = {
         username: data.user.username || '',
-        bio: data.user.bio || '',
-        avatar: data.user.avatar || '',
-        banner: data.user.banner || ''
+        bio: data.user.bio || ''
       }
       
       if (userId.value) {
@@ -394,62 +320,13 @@ const updateProfile = async () => {
   }
 }
 
-const updateAvatar = async () => {
-  loading.value = true
-  try {
-    const token = localStorage.getItem('auth_token')
-    const response = await fetch(`${API_URL}/api/profile/me/avatar`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ avatar: editForm.value.avatar })
-    })
-    
-    const data = await response.json()
-    
-    if (data.success) {
-      user.value.avatar = data.avatar
-      showAvatarModal.value = false
-    }
-  } catch (error) {
-    console.error('Failed to update avatar:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const updateBanner = async () => {
-  loading.value = true
-  try {
-    const token = localStorage.getItem('auth_token')
-    const response = await fetch(`${API_URL}/api/profile/me/banner`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ banner: editForm.value.banner })
-    })
-    
-    const data = await response.json()
-    
-    if (data.success) {
-      user.value.banner = data.banner
-      showSettingsModal.value = false
-    }
-  } catch (error) {
-    console.error('Failed to update banner:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const logout = () => {
-  localStorage.removeItem('auth_token')
-  localStorage.removeItem('user')
-  window.location.href = '/'
+const handleAvatarUploaded = (avatarUrl) => {
+  user.value.avatar = avatarUrl
+  const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+  localStorage.setItem('user', JSON.stringify({
+    ...storedUser,
+    avatar: avatarUrl
+  }))
 }
 
 const formatDate = (dateString) => {
@@ -462,7 +339,7 @@ const formatDate = (dateString) => {
 }
 
 const formatRelativeTime = (dateString) => {
-  if (!dateString) return ''
+  if (!dateString) return 'давно'
   const date = new Date(dateString)
   const now = new Date()
   const diff = now - date
@@ -499,6 +376,7 @@ onMounted(() => {
 .profile-page {
   min-height: 100vh;
   background: #0f0f1a;
+  padding-top: 70px;
 }
 
 .profile-banner {
@@ -576,7 +454,7 @@ onMounted(() => {
   font-weight: 700;
 }
 
-.real-name {
+.user-email {
   margin: 0 0 1rem 0;
   color: #718096;
   font-size: 1rem;
@@ -654,16 +532,6 @@ onMounted(() => {
 
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.2);
-}
-
-.btn-danger {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.btn-danger:hover {
-  background: rgba(239, 68, 68, 0.3);
 }
 
 .btn:disabled {
@@ -845,20 +713,6 @@ onMounted(() => {
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   color: #718096;
-}
-
-.favorites-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 1rem;
-}
-
-.favorite-item {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 1.5rem;
-  border-radius: 10px;
-  text-align: center;
-  color: #a0aec0;
 }
 
 .modal-overlay {
