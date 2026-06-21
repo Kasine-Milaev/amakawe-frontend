@@ -265,9 +265,23 @@ const toggleUserMenu = () => {
 const handleLogout = () => {
   localStorage.removeItem('auth_token')
   localStorage.removeItem('user')
+  
   currentUser.value = null
+  
   showUserMenu.value = false
-  window.location.href = '/'
+
+  import('vue').then(({ useRouter }) => {
+    const router = useRouter()
+    router.push('/').catch(() => {
+      window.location.href = '/'
+    })
+  }).catch(() => {
+    window.location.href = '/'
+  })
+  
+  setTimeout(() => {
+    window.dispatchEvent(new Event('storage'))
+  }, 100)
 }
 
 watch(searchInput, async (newVal) => {
