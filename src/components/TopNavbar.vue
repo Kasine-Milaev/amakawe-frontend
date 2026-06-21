@@ -60,21 +60,80 @@
         </button>
         
         <div class="user-profile">
-  <button v-if="!currentUser" class="login-btn" @click="showAuth = true">
-    <LogIn class="avatar-icon" />
-    <span class="login-text">Войти</span>
-  </button>
-  
-  <router-link v-else to="/profile" class="user-avatar-wrapper">
-    <div class="avatar" v-if="currentUser.photo_url">
-      <img :src="currentUser.photo_url" :alt="currentUser.username" class="avatar-img" />
-    </div>
-    <div class="avatar" v-else>
-      <User class="avatar-icon" />
-    </div>
-    <span v-if="currentUser.username" class="username">@{{ currentUser.username }}</span>
-  </router-link>
-</div>
+          <button v-if="!currentUser" class="login-btn" @click="showAuth = true">
+            <LogIn class="avatar-icon" />
+            <span class="login-text">Войти</span>
+          </button>
+          
+          <div v-else class="user-menu-wrapper" ref="userMenuRef">
+            <button class="user-avatar-wrapper" @click="toggleUserMenu">
+              <div class="avatar" v-if="currentUser.photo_url">
+                <img :src="currentUser.photo_url" :alt="currentUser.username" class="avatar-img" />
+              </div>
+              <div class="avatar" v-else>
+                <User class="avatar-icon" />
+              </div>
+              <span v-if="currentUser.username" class="username">@{{ currentUser.username }}</span>
+              <ChevronDown class="dropdown-icon" :class="{ open: showUserMenu }" />
+            </button>
+            
+            <Transition name="dropdown">
+              <div v-if="showUserMenu" class="user-dropdown-menu">
+                <div class="dropdown-header">
+                  <div class="avatar" v-if="currentUser.photo_url">
+                    <img :src="currentUser.photo_url" :alt="currentUser.username" class="avatar-img" />
+                  </div>
+                  <div class="avatar" v-else>
+                    <User class="avatar-icon" />
+                  </div>
+                  <div class="header-info">
+                    <span class="header-username">{{ currentUser.username || 'Пользователь' }}</span>
+                    <div class="header-stats">
+                      <span class="stat">🟢 {{ currentUser.rating || 0 }}</span>
+                      <span class="stat">▶ {{ currentUser.anime_count || 0 }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="dropdown-divider"></div>
+                
+                <router-link to="/profile" class="dropdown-item" @click="showUserMenu = false">
+                  <User class="dropdown-icon" />
+                  <span>Профиль</span>
+                </router-link>
+                
+                <router-link to="/profile" class="dropdown-item" @click="showUserMenu = false">
+                  <History class="dropdown-icon" />
+                  <span>История</span>
+                </router-link>
+                
+                <router-link to="/profile" class="dropdown-item" @click="showUserMenu = false">
+                  <List class="dropdown-icon" />
+                  <span>Мои списки</span>
+                </router-link>
+                
+                <router-link to="/profile" class="dropdown-item" @click="showUserMenu = false">
+                  <Star class="dropdown-icon" />
+                  <span>Избранное</span>
+                </router-link>
+                
+                <div class="dropdown-divider"></div>
+                
+                <router-link to="/settings" class="dropdown-item" @click="showUserMenu = false">
+                  <Settings class="dropdown-icon" />
+                  <span>Настройки</span>
+                </router-link>
+                
+                <div class="dropdown-divider"></div>
+                
+                <button class="dropdown-item logout-btn" @click="handleLogout">
+                  <LogOut class="dropdown-icon" />
+                  <span>Выйти</span>
+                </button>
+              </div>
+            </Transition>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -137,7 +196,12 @@ import {
   Star,
   Search,
   User,
-  LogIn
+  LogIn,
+  LogOut,
+  ChevronDown,
+  History,
+  List,
+  Settings
 } from 'lucide-vue-next'
 import { tg, initTelegram } from '../plugins/telegram'
 import { authService } from '../services/auth'
@@ -152,6 +216,8 @@ const searchInputRef = ref(null)
 const tgUser = ref(null)
 const showAuth = ref(false)
 const currentUser = ref(null)
+const showUserMenu = ref(false)
+const userMenuRef = ref(null)
 
 const toggleSearch = () => {
   showSearch.value = !showSearch.value
@@ -192,6 +258,18 @@ const handleAuthenticated = (user) => {
   currentUser.value = user
 }
 
+const toggleUserMenu = () => {
+  showUserMenu.value = !showUserMenu.value
+}
+
+const handleLogout = () => {
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('user')
+  currentUser.value = null
+  showUserMenu.value = false
+  window.location.href = '/'
+}
+
 watch(searchInput, async (newVal) => {
   if (newVal.trim().length > 2) {
     searchResults.value = await animeStore.searchAnime(newVal)
@@ -227,6 +305,12 @@ onMounted(async () => {
       currentUser.value = result.user
     }
   }
+  
+  document.addEventListener('click', (e) => {
+    if (userMenuRef.value && !userMenuRef.value.contains(e.target)) {
+      showUserMenu.value = false
+    }
+  })
 })
 </script>
 
@@ -390,10 +474,139 @@ onMounted(async () => {
   box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
 }
 
-.user-avatar-wrapper {
+.user-menu-wrapper {
   position: relative;
+}
+
+.user-avatar-wrapper {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.user-avatar-wrapper:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(102, 126, 234, 0.5);
+}
+
+.dropdown-icon {
+  width: 16px;
+  height: 16px;
+  color: #718096;
+  transition: transform 0.3s ease;
+}
+
+.dropdown-icon.open {
+  transform: rotate(180deg);
+}
+
+.user-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: rgba(20, 20, 35, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  min-width: 280px;
+  padding: 0.75rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+}
+
+.header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.header-username {
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.header-stats {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: #718096;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0.5rem 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #a0aec0;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.dropdown-item:hover {
+  background: rgba(102, 126, 234, 0.15);
+  color: #fff;
+}
+
+.dropdown-item .dropdown-icon {
+  width: 18px;
+  height: 18px;
+  color: #718096;
+}
+
+.dropdown-item:hover .dropdown-icon {
+  color: #667eea;
+}
+
+.logout-btn {
+  color: #fca5a5;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+.logout-btn .dropdown-icon {
+  color: #fca5a5;
+}
+
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 .avatar {

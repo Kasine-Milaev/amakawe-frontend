@@ -9,132 +9,99 @@
           <p class="modal-subtitle">Выберите способ входа</p>
           
           <div v-if="step === 'method'" class="auth-methods">
-            <button class="auth-btn email" @click="step = 'email'">
-              <Mail class="btn-icon" />
-              <span>Через Email</span>
-            </button>
-            
-            <button class="auth-btn telegram" @click="handleTelegramAuth">
-              <Send class="btn-icon" />
-              <span>Через Telegram</span>
-            </button>
+            <div class="login-form">
+              <div class="form-group">
+                <label>Логин</label>
+                <input
+                  v-model="loginForm.username"
+                  type="text"
+                  placeholder="username"
+                  :disabled="loading"
+                  autocomplete="username"
+                />
+              </div>
+              
+              <div class="form-group">
+                <label>Пароль</label>
+                <input
+                  v-model="loginForm.password"
+                  type="password"
+                  placeholder="••••••••"
+                  :disabled="loading"
+                  autocomplete="current-password"
+                />
+              </div>
+              
+              <button 
+                class="submit-btn" 
+                @click="handleLogin"
+                :disabled="loading || !loginForm.username || !loginForm.password"
+              >
+                {{ loading ? 'Вход...' : 'Войти' }}
+              </button>
+              
+              <div class="divider">
+                <span>или</span>
+              </div>
+              
+              <button class="auth-btn telegram" @click="handleTelegramAuth">
+                <Send class="btn-icon" />
+                <span>Через Telegram</span>
+              </button>
+              
+              <button class="auth-btn register" @click="step = 'register'">
+                <UserPlus class="btn-icon" />
+                <span>Создать аккаунт</span>
+              </button>
+            </div>
           </div>
           
-          <div v-if="step === 'email'" class="auth-form">
+          <div v-if="step === 'register'" class="auth-form">
             <button class="back-btn" @click="step = 'method'">
               <ArrowLeft class="btn-icon" /> Назад
             </button>
             
-            <div class="form-group">
-              <label>Email</label>
-              <input
-                v-model="email"
-                type="email"
-                placeholder="your@email.com"
-                :disabled="loading"
-              />
-            </div>
-            
-            <button 
-              class="submit-btn" 
-              @click="requestCode"
-              :disabled="loading || !email"
-            >
-              {{ loading ? 'Отправка...' : 'Получить код' }}
-            </button>
-          </div>
-          
-          <div v-if="step === 'code'" class="auth-form">
-            <button class="back-btn" @click="step = 'email'">
-              <ArrowLeft class="btn-icon" /> Назад
-            </button>
-            
-            <p class="form-hint">Код отправлен на {{ email }}</p>
+            <h3 class="form-title">Создание аккаунта</h3>
             
             <div class="form-group">
-              <label>Код подтверждения</label>
+              <label>Логин</label>
               <input
-                v-model="code"
+                v-model="registerForm.username"
                 type="text"
-                placeholder="123456"
-                maxlength="6"
+                placeholder="Придумайте логин"
                 :disabled="loading"
-                class="code-input"
-              />
-            </div>
-            
-            <button 
-              class="submit-btn" 
-              @click="verifyCode"
-              :disabled="loading || !code"
-            >
-              {{ loading ? 'Проверка...' : 'Подтвердить' }}
-            </button>
-            
-            <button class="resend-btn" @click="requestCode" :disabled="resendTimer > 0">
-              {{ resendTimer > 0 ? `Отправить повторно (${resendTimer}s)` : 'Отправить код снова' }}
-            </button>
-          </div>
-          
-          <div v-if="step === 'register'" class="auth-form">
-            <button class="back-btn" @click="step = 'email'">
-              <ArrowLeft class="btn-icon" /> Назад
-            </button>
-            
-            <p class="form-hint">Создайте аккаунт</p>
-            
-            <div class="form-group">
-              <label>Имя пользователя</label>
-              <input
-                v-model="username"
-                type="text"
-                placeholder="username"
-                :disabled="loading"
+                autocomplete="username"
               />
             </div>
             
             <div class="form-group">
               <label>Пароль</label>
               <input
-                v-model="password"
+                v-model="registerForm.password"
                 type="password"
                 placeholder="Минимум 6 символов"
                 :disabled="loading"
+                autocomplete="new-password"
               />
             </div>
-            
-            <button 
-              class="submit-btn" 
-              @click="register"
-              :disabled="loading || !password"
-            >
-              {{ loading ? 'Создание...' : 'Создать аккаунт' }}
-            </button>
-          </div>
-          
-          <div v-if="step === 'login'" class="auth-form">
-            <button class="back-btn" @click="step = 'email'">
-              <ArrowLeft class="btn-icon" /> Назад
-            </button>
-            
-            <p class="form-hint">Введите пароль</p>
             
             <div class="form-group">
-              <label>Пароль</label>
+              <label>Повторите пароль</label>
               <input
-                v-model="password"
+                v-model="registerForm.confirmPassword"
                 type="password"
-                placeholder="Ваш пароль"
+                placeholder="Повторите пароль"
                 :disabled="loading"
+                autocomplete="new-password"
               />
             </div>
             
             <button 
               class="submit-btn" 
-              @click="login"
-              :disabled="loading || !password"
+              @click="handleRegister"
+              :disabled="loading || !registerForm.username || !registerForm.password"
             >
-              {{ loading ? 'Вход...' : 'Войти' }}
+              {{ loading ? 'Создание...' : 'Создать аккаунт' }}
             </button>
           </div>
           
@@ -150,7 +117,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Mail, Send, ArrowLeft, AlertCircle } from 'lucide-vue-next'
+import { Send, ArrowLeft, AlertCircle, UserPlus } from 'lucide-vue-next'
 import { tg } from '../plugins/telegram'
 
 const props = defineProps({
@@ -171,24 +138,96 @@ const close = () => {
 }
 
 const step = ref('method')
-const email = ref('')
-const code = ref('')
-const username = ref('')
-const password = ref('')
 const loading = ref(false)
 const error = ref('')
-const resendTimer = ref(0)
+
+const loginForm = ref({
+  username: '',
+  password: ''
+})
+
+const registerForm = ref({
+  username: '',
+  password: '',
+  confirmPassword: ''
+})
 
 const resetForm = () => {
   step.value = 'method'
-  email.value = ''
-  code.value = ''
-  username.value = ''
-  password.value = ''
+  loginForm.value = { username: '', password: '' }
+  registerForm.value = { username: '', password: '', confirmPassword: '' }
   loading.value = false
   error.value = ''
-  resendTimer.value = 0
-  localStorage.removeItem('verification_token')
+}
+
+const handleLogin = async () => {
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const response = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: loginForm.value.username.toLowerCase(),
+        password: loginForm.value.password
+      })
+    })
+    
+    const data = await response.json()
+    
+    if (data.token) {
+      localStorage.setItem('auth_token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      emit('authenticated', data.user)
+      close()
+    } else {
+      error.value = data.error || 'Неверный логин или пароль'
+    }
+  } catch (err) {
+    error.value = 'Ошибка подключения к серверу'
+    console.error('Login error:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleRegister = async () => {
+  loading.value = true
+  error.value = ''
+  
+  if (registerForm.value.password !== registerForm.value.confirmPassword) {
+    error.value = 'Пароли не совпадают'
+    loading.value = false
+    return
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: registerForm.value.username.toLowerCase(),
+        password: registerForm.value.password
+      })
+    })
+    
+    const data = await response.json()
+    
+    if (data.token) {
+      localStorage.setItem('auth_token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      emit('authenticated', data.user)
+      close()
+    } else {
+      error.value = data.error || 'Не удалось создать аккаунт'
+    }
+  } catch (err) {
+    error.value = 'Ошибка подключения к серверу'
+    console.error('Register error:', err)
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleTelegramAuth = async () => {
@@ -227,155 +266,6 @@ const handleTelegramAuth = async () => {
       close()
     } else {
       error.value = data.error || 'Ошибка авторизации'
-    }
-  } catch (err) {
-    error.value = 'Ошибка подключения к серверу'
-  } finally {
-    loading.value = false
-  }
-}
-
-const requestCode = async () => {
-  loading.value = true
-  error.value = ''
-  
-  try {
-    const response = await fetch(`${API_URL}/api/auth/email/request-code`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.value })
-    })
-    
-    const data = await response.json()
-    
-    if (data.success) {
-      localStorage.setItem('verification_token', data.verificationToken)
-      localStorage.setItem('verification_email', email.value)
-      
-      step.value = 'code'
-      resendTimer.value = 60
-      startResendTimer()
-    } else {
-      error.value = data.error || 'Не удалось отправить код'
-      console.error('Request code error:', data.error)
-    }
-  } catch (err) {
-    error.value = 'Ошибка подключения к серверу'
-    console.error('Request code exception:', err)
-  } finally {
-    loading.value = false
-  }
-}
-
-const startResendTimer = () => {
-  const interval = setInterval(() => {
-    resendTimer.value--
-    if (resendTimer.value <= 0) {
-      clearInterval(interval)
-    }
-  }, 1000)
-}
-
-const verifyCode = async () => {
-  loading.value = true
-  error.value = ''
-  
-  try {
-    const verificationToken = localStorage.getItem('verification_token')
-    const email = localStorage.getItem('verification_email') || email.value
-    
-    const response = await fetch(`${API_URL}/api/auth/email/verify-code`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        code: code.value,
-        verificationToken
-      })
-    })
-    
-    const data = await response.json()
-    
-    if (data.success && data.verified) {
-      localStorage.removeItem('verification_token')
-      localStorage.removeItem('verification_email')
-      
-      if (data.needsRegistration) {
-        step.value = 'register'
-      } else if (data.token) {
-        localStorage.setItem('auth_token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
-        emit('authenticated', data.user)
-        close()
-      } else {
-        error.value = 'Неизвестная ошибка'
-      }
-    } else {
-      error.value = data.error || 'Неверный код'
-    }
-  } catch (err) {
-    error.value = 'Ошибка подключения к серверу'
-    console.error('Verify code exception:', err)
-  } finally {
-    loading.value = false
-  }
-}
-
-const register = async () => {
-  loading.value = true
-  error.value = ''
-  
-  try {
-    const response = await fetch(`${API_URL}/api/auth/email/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value,
-        username: username.value || email.value.split('@')[0]
-      })
-    })
-    
-    const data = await response.json()
-    
-    if (data.token) {
-      localStorage.setItem('auth_token', data.token)
-      localStorage.setItem('user', JSON.stringify(data.user))
-      emit('authenticated', data.user)
-      close()
-    } else {
-      error.value = data.error || 'Не удалось создать аккаунт'
-    }
-  } catch (err) {
-    error.value = 'Ошибка подключения к серверу'
-  } finally {
-    loading.value = false
-  }
-}
-
-const login = async () => {
-  loading.value = true
-  error.value = ''
-  
-  try {
-    const response = await fetch(`${API_URL}/api/auth/email/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value
-      })
-    })
-    
-    const data = await response.json()
-    
-    if (data.token) {
-      localStorage.setItem('auth_token', data.token)
-      localStorage.setItem('user', JSON.stringify(data.user))
-      emit('authenticated', data.user)
-      close()
-    } else {
-      error.value = data.error || 'Неверный email или пароль'
     }
   } catch (err) {
     error.value = 'Ошибка подключения к серверу'
@@ -456,64 +346,10 @@ const login = async () => {
   gap: 0.75rem;
 }
 
-.auth-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.auth-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-2px);
-}
-
-.auth-btn.email:hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.15);
-}
-
-.auth-btn.telegram:hover {
-  border-color: #0088cc;
-  background: rgba(0, 136, 204, 0.15);
-}
-
-.btn-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.auth-form {
+.login-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: transparent;
-  border: none;
-  color: #718096;
-  font-size: 0.9rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  margin-left: -0.5rem;
-  transition: color 0.2s;
-}
-
-.back-btn:hover {
-  color: #fff;
 }
 
 .form-group {
@@ -549,18 +385,11 @@ const login = async () => {
   cursor: not-allowed;
 }
 
-.code-input {
+.form-title {
+  margin: 0 0 1rem 0;
+  color: #fff;
+  font-size: 1.2rem;
   text-align: center;
-  font-size: 1.25rem;
-  letter-spacing: 0.5rem;
-  font-weight: 700;
-}
-
-.form-hint {
-  color: #718096;
-  font-size: 0.9rem;
-  text-align: center;
-  margin: 0;
 }
 
 .submit-btn {
@@ -587,25 +416,84 @@ const login = async () => {
   transform: none;
 }
 
-.resend-btn {
-  padding: 0.75rem;
-  border-radius: 10px;
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.divider span {
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.auth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.auth-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.auth-btn.telegram:hover {
+  border-color: #0088cc;
+  background: rgba(0, 136, 204, 0.15);
+}
+
+.auth-btn.register:hover {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.15);
+}
+
+.btn-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   background: transparent;
+  border: none;
   color: #718096;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s;
+  padding: 0.5rem;
+  margin-left: -0.5rem;
+  transition: color 0.2s;
 }
 
-.resend-btn:hover:not(:disabled) {
-  color: #667eea;
-  border-color: #667eea;
-}
-
-.resend-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.back-btn:hover {
+  color: #fff;
 }
 
 .error-message {
