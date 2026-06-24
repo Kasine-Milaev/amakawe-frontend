@@ -242,14 +242,27 @@ const userAvatar = computed(() => {
 const fetchProfile = async () => {
   try {
     const token = localStorage.getItem('auth_token')
+    
+    if (!token) {
+      console.warn('No token found')
+      return
+    }
+    
     const url = userId.value 
       ? `${API_URL}/api/profile/${userId.value}`
       : `${API_URL}/api/profile/me`
     
-    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    console.log('Fetching profile from:', url)
     
-    const response = await fetch(url, { headers })
+    const response = await fetch(url, { 
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
     const data = await response.json()
+    console.log('Profile data:', data)
     
     if (data.success) {
       user.value = data.user
@@ -258,12 +271,14 @@ const fetchProfile = async () => {
         bio: data.user.bio || ''
       }
       
-      if (userId.value) {
-        await fetchActivity()
-      } else {
+      if (!userId.value) {
         isOwnProfile.value = true
-        await fetchActivity()
+        localStorage.setItem('user', JSON.stringify(data.user))
       }
+      
+      await fetchActivity()
+    } else {
+      console.error('Profile fetch failed:', data.error)
     }
   } catch (error) {
     console.error('Failed to fetch profile:', error)
