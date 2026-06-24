@@ -177,40 +177,67 @@ const cropAndUpload = async () => {
   
   try {
     cropper.value.getCropBlob((blob) => {
-      const reader = new FileReader()
-      reader.onloadend = async () => {
-        const base64 = reader.result
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const maxSize = 512
+      
+      const img = new Image()
+      img.onload = async () => {
+        let width = img.width
+        let height = img.height
         
-        try {
-          const token = localStorage.getItem('auth_token')
-          
-          const response = await fetch(`${API_URL}/api/profile/me/avatar/upload`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              avatar: base64
-            })
-          })
-          
-          const data = await response.json()
-          
-          if (data.success) {
-            emit('uploaded', data.avatar)
-            close()
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = (height / width) * maxSize
+            width = maxSize
           } else {
-            error.value = data.error || 'Не удалось загрузить аватар'
+            width = (width / height) * maxSize
+            height = maxSize
           }
-        } catch (err) {
-          error.value = 'Ошибка подключения к серверу'
-          console.error('Upload error:', err)
-        } finally {
-          loading.value = false
         }
+        
+        canvas.width = width
+        canvas.height = height
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        canvas.toBlob(async (compressedBlob) => {
+          const reader = new FileReader()
+          reader.onloadend = async () => {
+            const base64 = reader.result
+            
+            try {
+              const token = localStorage.getItem('auth_token')
+              
+              const response = await fetch(`${API_URL}/api/profile/me/avatar/upload`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  avatar: base64
+                })
+              })
+              
+              const data = await response.json()
+              
+              if (data.success) {
+                emit('uploaded', data.avatar)
+                close()
+              } else {
+                error.value = data.error || 'Не удалось загрузить аватар'
+              }
+            } catch (err) {
+              error.value = 'Ошибка подключения к серверу'
+              console.error('Upload error:', err)
+            } finally {
+              loading.value = false
+            }
+          }
+          reader.readAsDataURL(compressedBlob)
+        }, 'image/jpeg', 0.7)
       }
-      reader.readAsDataURL(blob)
+      img.src = URL.createObjectURL(blob)
     })
   } catch (err) {
     error.value = 'Ошибка при обрезке изображения'

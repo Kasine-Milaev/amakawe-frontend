@@ -1,8 +1,9 @@
 <template>
   <div class="status-dropdown" ref="dropdownRef">
     <button class="status-btn" :class="statusClass" @click="toggleDropdown">
+      <component :is="currentStatus.icon" class="btn-icon" />
       <span>{{ currentStatus.text }}</span>
-      <ChevronDown class="icon" :class="{ rotate: isOpen }" />
+      <ChevronDown class="dropdown-icon" :class="{ rotate: isOpen }" />
     </button>
     
     <Transition name="dropdown">
@@ -14,7 +15,7 @@
           :class="{ active: modelValue === status.value }"
           @click="selectStatus(status.value)"
         >
-          <component :is="status.icon" class="icon-small" />
+          <component :is="status.icon" class="icon-small" :class="status.colorClass" />
           <span>{{ status.label }}</span>
           <Check v-if="modelValue === status.value" class="check-icon" />
         </button>
@@ -37,7 +38,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
   ChevronDown, Check, Trash2, Play, Clock, CheckCircle2, 
-  PauseCircle, XCircle, Heart 
+  PauseCircle, XCircle, Heart
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -51,11 +52,11 @@ const isOpen = ref(false)
 const dropdownRef = ref(null)
 
 const statuses = [
-  { value: 'watching', label: 'Смотрю', icon: Play },
-  { value: 'planned', label: 'Запланировал', icon: Clock },
-  { value: 'completed', label: 'Просмотрено', icon: CheckCircle2 },
-  { value: 'on_hold', label: 'Отложил', icon: PauseCircle },
-  { value: 'dropped', label: 'Бросил', icon: XCircle }
+  { value: 'watching', label: 'Смотрю', icon: Play, colorClass: 'color-watching' },
+  { value: 'planned', label: 'Запланировал', icon: Clock, colorClass: 'color-planned' },
+  { value: 'completed', label: 'Просмотрено', icon: CheckCircle2, colorClass: 'color-completed' },
+  { value: 'on_hold', label: 'Отложил', icon: PauseCircle, colorClass: 'color-hold' },
+  { value: 'dropped', label: 'Бросил', icon: XCircle, colorClass: 'color-dropped' }
 ]
 
 const currentStatus = computed(() => {
@@ -70,7 +71,7 @@ const statusClass = computed(() => {
     on_hold: 'status-hold',
     dropped: 'status-dropped'
   }
-  return classes[props.modelValue] || ''
+  return classes[props.modelValue] || 'status-default'
 })
 
 const toggleDropdown = () => {
@@ -80,6 +81,12 @@ const toggleDropdown = () => {
 const selectStatus = async (status) => {
   try {
     const token = localStorage.getItem('auth_token')
+    if (!token) {
+      alert('Войдите чтобы добавлять в списки')
+      isOpen.value = false
+      return
+    }
+    
     const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://amakawe-backendd.vercel.app'}/api/anime/${props.animeId}/activity`, {
       method: 'POST',
       headers: {
@@ -126,43 +133,93 @@ onUnmounted(() => {
 <style scoped>
 .status-dropdown {
   position: relative;
+  flex: 1;
 }
 
 .status-btn {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   border-radius: 8px;
   border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  width: 100%;
 }
 
-.status-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+.btn-icon {
+  width: 18px;
+  height: 18px;
 }
 
-.status-watching { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-.status-planned { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-.status-completed { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
-.status-hold { background: rgba(234, 179, 8, 0.2); color: #eab308; }
-.status-dropped { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-
-.icon {
+.dropdown-icon {
   width: 16px;
   height: 16px;
+  opacity: 0.7;
   transition: transform 0.2s;
 }
 
-.icon.rotate {
+.dropdown-icon.rotate {
   transform: rotate(180deg);
 }
 
+/* STATUS COLORS */
+.status-watching {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+.status-watching:hover {
+  background: rgba(34, 197, 94, 0.3);
+}
+
+.status-planned {
+  background: rgba(168, 85, 247, 0.2);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+.status-planned:hover {
+  background: rgba(168, 85, 247, 0.3);
+}
+
+.status-completed {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.status-completed:hover {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.status-hold {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+.status-hold:hover {
+  background: rgba(234, 179, 8, 0.3);
+}
+
+.status-dropped {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.status-dropped:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.status-default {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* DROPDOWN MENU */
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 5px);
@@ -199,8 +256,8 @@ onUnmounted(() => {
 }
 
 .dropdown-item.active {
-  background: rgba(102, 126, 234, 0.2);
-  color: #667eea;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
 }
 
 .dropdown-item.remove {
@@ -211,10 +268,17 @@ onUnmounted(() => {
   background: rgba(239, 68, 68, 0.15);
 }
 
+/* ICON COLORS */
 .icon-small {
   width: 16px;
   height: 16px;
 }
+
+.color-watching { color: #22c55e; }
+.color-planned { color: #a855f7; }
+.color-completed { color: #3b82f6; }
+.color-hold { color: #eab308; }
+.color-dropped { color: #ef4444; }
 
 .check-icon {
   margin-left: auto;
@@ -229,6 +293,7 @@ onUnmounted(() => {
   margin: 0.5rem 0;
 }
 
+/* ANIMATIONS */
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
