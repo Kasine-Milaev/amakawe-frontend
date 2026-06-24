@@ -1,10 +1,24 @@
 <template>
   <div class="profile-page">
-    <div class="profile-banner" :style="{ backgroundImage: user.banner ? `url(${user.banner})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }">
-      <div class="banner-overlay"></div>
+    <div v-if="loading" class="loading-profile">
+      <div class="spinner"></div>
+      <p>Загрузка профиля...</p>
     </div>
     
-    <div class="profile-content">
+    <div v-else-if="!isLoggedIn" class="not-logged-in">
+      <h2>Войдите в аккаунт</h2>
+      <p>Чтобы просматривать профиль, необходимо авторизоваться</p>
+      <button class="btn btn-primary" @click="showAuth = true">
+        <LogIn class="icon" />
+        Войти
+      </button>
+    </div>
+    
+    <div v-else class="profile-content">
+      <div class="profile-banner" :style="{ backgroundImage: user.banner ? `url(${user.banner})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }">
+        <div class="banner-overlay"></div>
+      </div>
+      
       <div class="profile-header">
         <div class="avatar-container">
           <img 
@@ -27,7 +41,7 @@
               <span class="stat-label">Рейтинг</span>
             </div>
             <div class="stat">
-              <span class="stat-value">{{ user.anime_count || 0 }}</span>
+              <span class="stat-value">{{ animeListsCount }}</span>
               <span class="stat-label">Аниме</span>
             </div>
             <div class="stat">
@@ -48,6 +62,10 @@
           <button class="btn btn-secondary" @click="showEditModal = true">
             <Edit2 class="icon" />
             Редактировать
+          </button>
+          <button class="btn btn-secondary" @click="$router.push('/settings')">
+            <Settings class="icon" />
+            Настройки
           </button>
         </div>
       </div>
@@ -76,6 +94,13 @@
               <List class="icon" />
               Списки
             </button>
+            <button 
+              :class="['nav-item', { active: activeTab === 'favorites' }]"
+              @click="activeTab = 'favorites'"
+            >
+              <Heart class="icon" />
+              Избранное
+            </button>
           </nav>
         </div>
         
@@ -98,7 +123,7 @@
             <h2 class="tab-title">Активность</h2>
             <div v-if="activity.history && activity.history.length > 0" class="activity-list">
               <div v-for="(item, index) in activity.history" :key="index" class="activity-item">
-                <div class="activity-icon">
+                <div class="activity-icon" :class="getStatusColor(item.action)">
                   <PlayCircle v-if="item.action === 'watching'" class="icon" />
                   <CheckCircle v-else-if="item.action === 'completed'" class="icon" />
                   <Clock v-else-if="item.action === 'planned'" class="icon" />
@@ -123,53 +148,100 @@
           <div v-if="activeTab === 'lists'" class="tab-content">
             <h2 class="tab-title">Списки аниме</h2>
             <div class="lists-grid">
-              <div class="list-card">
+              <div class="list-card watching">
                 <div class="list-header">
                   <Tv class="icon" />
                   <h3>Смотрю</h3>
                   <span class="list-count">{{ activity.animeLists?.watching?.length || 0 }}</span>
                 </div>
                 <div class="list-items">
-                  <span v-for="id in (activity.animeLists?.watching || []).slice(0, 5)" :key="id" class="list-item">
-                    #{{ id }}
-                  </span>
+                  <div v-for="id in (activity.animeLists?.watching || []).slice(0, 5)" :key="id" class="anime-item">
+                    <router-link :to="`/anime/${id}`" class="anime-link">#{{ id }}</router-link>
+                  </div>
                   <span v-if="(activity.animeLists?.watching || []).length > 5" class="list-more">
                     +{{ (activity.animeLists?.watching || []).length - 5 }} ещё
                   </span>
                 </div>
               </div>
               
-              <div class="list-card">
+              <div class="list-card planned">
                 <div class="list-header">
                   <Calendar class="icon" />
                   <h3>В планах</h3>
                   <span class="list-count">{{ activity.animeLists?.planned?.length || 0 }}</span>
                 </div>
                 <div class="list-items">
-                  <span v-for="id in (activity.animeLists?.planned || []).slice(0, 5)" :key="id" class="list-item">
-                    #{{ id }}
-                  </span>
+                  <div v-for="id in (activity.animeLists?.planned || []).slice(0, 5)" :key="id" class="anime-item">
+                    <router-link :to="`/anime/${id}`" class="anime-link">#{{ id }}</router-link>
+                  </div>
                   <span v-if="(activity.animeLists?.planned || []).length > 5" class="list-more">
                     +{{ (activity.animeLists?.planned || []).length - 5 }} ещё
                   </span>
                 </div>
               </div>
               
-              <div class="list-card">
+              <div class="list-card completed">
                 <div class="list-header">
                   <CheckCircle class="icon" />
                   <h3>Просмотрено</h3>
                   <span class="list-count">{{ activity.animeLists?.completed?.length || 0 }}</span>
                 </div>
                 <div class="list-items">
-                  <span v-for="id in (activity.animeLists?.completed || []).slice(0, 5)" :key="id" class="list-item">
-                    #{{ id }}
-                  </span>
+                  <div v-for="id in (activity.animeLists?.completed || []).slice(0, 5)" :key="id" class="anime-item">
+                    <router-link :to="`/anime/${id}`" class="anime-link">#{{ id }}</router-link>
+                  </div>
                   <span v-if="(activity.animeLists?.completed || []).length > 5" class="list-more">
                     +{{ (activity.animeLists?.completed || []).length - 5 }} ещё
                   </span>
                 </div>
               </div>
+              
+              <div class="list-card on-hold">
+                <div class="list-header">
+                  <PauseCircle class="icon" />
+                  <h3>Отложено</h3>
+                  <span class="list-count">{{ activity.animeLists?.onHold?.length || 0 }}</span>
+                </div>
+                <div class="list-items">
+                  <div v-for="id in (activity.animeLists?.onHold || []).slice(0, 5)" :key="id" class="anime-item">
+                    <router-link :to="`/anime/${id}`" class="anime-link">#{{ id }}</router-link>
+                  </div>
+                  <span v-if="(activity.animeLists?.onHold || []).length > 5" class="list-more">
+                    +{{ (activity.animeLists?.onHold || []).length - 5 }} ещё
+                  </span>
+                </div>
+              </div>
+              
+              <div class="list-card dropped">
+                <div class="list-header">
+                  <XCircle class="icon" />
+                  <h3>Брошено</h3>
+                  <span class="list-count">{{ activity.animeLists?.dropped?.length || 0 }}</span>
+                </div>
+                <div class="list-items">
+                  <div v-for="id in (activity.animeLists?.dropped || []).slice(0, 5)" :key="id" class="anime-item">
+                    <router-link :to="`/anime/${id}`" class="anime-link">#{{ id }}</router-link>
+                  </div>
+                  <span v-if="(activity.animeLists?.dropped || []).length > 5" class="list-more">
+                    +{{ (activity.animeLists?.dropped || []).length - 5 }} ещё
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="activeTab === 'favorites'" class="tab-content">
+            <h2 class="tab-title">Избранное</h2>
+            <div v-if="user.favorites && user.favorites.length > 0" class="favorites-grid">
+              <div v-for="id in user.favorites" :key="id" class="favorite-card">
+                <router-link :to="`/anime/${id}`" class="favorite-link">
+                  Аниме #{{ id }}
+                </router-link>
+              </div>
+            </div>
+            <div v-else class="empty-state">
+              <Heart class="icon" />
+              <p>Пока нет избранных аниме</p>
             </div>
           </div>
         </div>
@@ -200,29 +272,34 @@
       v-model:show="showAvatarCropper"
       @uploaded="handleAvatarUploaded"
     />
+    <AuthModal v-model="showAuth" @authenticated="handleAuthenticated" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { 
-  Camera, Edit2, User, Activity, List, 
+  Camera, Edit2, User, Activity, List, LogIn, Settings, Heart,
   Calendar, Clock, Tv, CheckCircle, XCircle, PlayCircle, 
   PauseCircle
 } from 'lucide-vue-next'
 import AvatarCropper from '../components/AvatarCropper.vue'
+import AuthModal from '../components/AuthModal.vue'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://amakawe-backendd.vercel.app'
 
 const route = useRoute()
+const router = useRouter()
 const user = ref({})
 const activity = ref({})
-const loading = ref(false)
+const loading = ref(true)
 const activeTab = ref('about')
 const isOwnProfile = ref(false)
+const isLoggedIn = ref(false)
 const showEditModal = ref(false)
 const showAvatarCropper = ref(false)
+const showAuth = ref(false)
 
 const editForm = ref({
   username: '',
@@ -239,14 +316,27 @@ const userAvatar = computed(() => {
   return `https://ui-avatars.com/api/?name=Anonymous&background=667eea&color=fff&size=200`
 })
 
+const animeListsCount = computed(() => {
+  const lists = activity.value.animeLists || {}
+  return (lists.watching?.length || 0) + 
+         (lists.planned?.length || 0) + 
+         (lists.completed?.length || 0) + 
+         (lists.onHold?.length || 0) + 
+         (lists.dropped?.length || 0)
+})
+
 const fetchProfile = async () => {
   try {
     const token = localStorage.getItem('auth_token')
     
     if (!token) {
+      isLoggedIn.value = false
+      loading.value = false
       console.warn('No token found')
       return
     }
+    
+    isLoggedIn.value = true
     
     const url = userId.value 
       ? `${API_URL}/api/profile/${userId.value}`
@@ -279,9 +369,13 @@ const fetchProfile = async () => {
       await fetchActivity()
     } else {
       console.error('Profile fetch failed:', data.error)
+      isLoggedIn.value = false
     }
   } catch (error) {
     console.error('Failed to fetch profile:', error)
+    isLoggedIn.value = false
+  } finally {
+    loading.value = false
   }
 }
 
@@ -344,6 +438,12 @@ const handleAvatarUploaded = (avatarUrl) => {
   }))
 }
 
+const handleAuthenticated = (userData) => {
+  user.value = userData
+  isLoggedIn.value = true
+  fetchProfile()
+}
+
 const formatDate = (dateString) => {
   if (!dateString) return ''
   return new Date(dateString).toLocaleDateString('ru-RU', {
@@ -382,6 +482,17 @@ const getActionText = (action) => {
   return texts[action] || action
 }
 
+const getStatusColor = (action) => {
+  const colors = {
+    watching: 'status-watching',
+    completed: 'status-completed',
+    planned: 'status-planned',
+    dropped: 'status-dropped',
+    on_hold: 'status-hold'
+  }
+  return colors[action] || ''
+}
+
 onMounted(() => {
   fetchProfile()
 })
@@ -392,6 +503,30 @@ onMounted(() => {
   min-height: 100vh;
   background: #0f0f1a;
   padding-top: 70px;
+}
+
+.loading-profile, .not-logged-in {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  color: #fff;
+  text-align: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(102, 126, 234, 0.3);
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .profile-banner {
@@ -655,11 +790,16 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(102, 126, 234, 0.2);
   border-radius: 8px;
-  color: #667eea;
+  color: white;
   flex-shrink: 0;
 }
+
+.activity-icon.status-watching { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.activity-icon.status-completed { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.activity-icon.status-planned { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+.activity-icon.status-hold { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+.activity-icon.status-dropped { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
 
 .activity-info {
   flex: 1;
@@ -685,7 +825,14 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.03);
   border-radius: 10px;
   padding: 1.25rem;
+  border-top: 3px solid transparent;
 }
+
+.list-card.watching { border-top-color: #22c55e; }
+.list-card.planned { border-top-color: #a855f7; }
+.list-card.completed { border-top-color: #3b82f6; }
+.list-card.on-hold { border-top-color: #eab308; }
+.list-card.dropped { border-top-color: #ef4444; }
 
 .list-header {
   display: flex;
@@ -716,18 +863,47 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
-.list-item {
+.anime-item {
   background: rgba(255, 255, 255, 0.05);
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   font-size: 0.875rem;
+}
+
+.anime-link {
   color: #a0aec0;
+  text-decoration: none;
+}
+
+.anime-link:hover {
+  color: #667eea;
 }
 
 .list-more {
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   color: #718096;
+}
+
+.favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.favorite-card {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.favorite-link {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.favorite-link:hover {
+  text-decoration: underline;
 }
 
 .modal-overlay {
