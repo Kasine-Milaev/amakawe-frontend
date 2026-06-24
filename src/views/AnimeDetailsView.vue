@@ -23,7 +23,14 @@
           </button>
 
           <div class="poster-actions">
-            <button class="action-btn primary"><Heart class="icon" /> В список</button>
+            <AnimeStatusDropdown 
+              v-model="currentUserStatus"
+              :anime-id="animeId"
+              @change="handleStatusChange"
+            />
+            <button class="action-btn" :class="{ active: isFavorite }" @click="toggleFavorite">
+              <Heart class="icon" :class="{ filled: isFavorite }" />
+            </button>
             <button class="action-btn"><Share2 class="icon" /></button>
           </div>
 
@@ -74,7 +81,6 @@
             <div class="description" v-html="formatDescription(anime.description)"></div>
           </div>
 
-          <!-- Relations Section - ИСПРАВЛЕНО -->
           <div class="relations-section" v-if="relations && relations.length > 0">
             <div class="relations-header">
               <h3>🔗 Похожее и связанное</h3>
@@ -121,10 +127,11 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnimeStore } from '../stores/anime'
 import { Play, Heart, Share2, Star, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import AnimeStatusDropdown from '../components/AnimeStatusDropdown.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -134,11 +141,18 @@ const relations = ref([])
 const relationsContainer = ref(null)
 const canScrollLeft = ref(false)
 const canScrollRight = ref(true)
+const currentUserStatus = ref(null)
+const isFavorite = ref(false)
+const animeId = ref(null)
+
+const API_URL = import.meta.env.VITE_API_URL || 'https://amakawe-backendd.vercel.app'
 
 onMounted(async () => {
   try {
+    animeId.value = route.params.id
     anime.value = await animeStore.fetchAnimeById(route.params.id)
     console.log('✅ Anime loaded:', anime.value)
+    
     if (anime.value.relations && anime.value.relations.length > 0) {
       relations.value = anime.value.relations.map(rel => {
         const node = rel.node
@@ -154,10 +168,107 @@ onMounted(async () => {
       }).filter(r => r.id)
       console.log('✅ Relations loaded:', relations.value.length)
     }
+    
+    await loadUserStatus()
+    await loadUserFavorites()
   } catch (error) {
     console.error('❌ Failed to load anime:', error)
   }
 })
+
+const loadUserStatus = async () => {
+  const token = localStorage.getItem('auth_token')
+  if (!token) return
+  
+  try {
+    const response = await fetch(`${API_URL}/api/profile/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await response.json()
+    
+    if (data.success) {
+      const lists = data.user.anime_lists || {}
+      const id = parseInt(animeId.value)
+      
+      if (lists.watching?.includes(id)) currentUserStatus.value = 'watching'
+      else if (lists.planned?.includes(id)) currentUserStatus.value = 'planned'
+      else if (lists.completed?.includes(id)) currentUserStatus.value = 'completed'
+      else if (lists.onHold?.includes(id)) currentUserStatus.value = 'on_hold'
+      else if (lists.dropped?.includes(id)) currentUserStatus.value = 'dropped'
+    }
+  } catch (error) {
+    console.error('Failed to load status:', error)
+  }
+}
+
+const loadUserFavorites = async () => {
+  const token = localStorage.getItem('auth_token')
+  if (!token) return
+  
+  try {
+    const response = await fetch(`${API_URL}/api/profile/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await response.json()
+    
+    if (data.success) {
+      const favorites = data.user.favorites || []
+      isFavorite.value = favorites.includes(parseInt(animeId.value))
+    }
+  } catch (error) {
+    console.error('Failed to load favorites:', error)
+  }
+}
+
+const handleStatusChange = async ({ animeId, status }) => {
+  console.log('Status changed:', animeId, status)
+  const token = localStorage.getItem('auth_token')
+  if (!token) return
+  
+  try {
+    const response = await fetch(`${API_URL}/api/anime/${animeId}/activity`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ action: status })
+    })
+    
+    const data = await response.json()
+    if (data.success) {
+      console.log('✅ Status updated')
+    }
+  } catch (error) {
+    console.error('Failed to update status:', error)
+  }
+}
+
+const toggleFavorite = async () => {
+  const token = localStorage.getItem('auth_token')
+  if (!token) {
+    alert('Войдите чтобы добавлять в избранное')
+    return
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/api/profile/me/favorites`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ animeId: parseInt(animeId.value) })
+    })
+    
+    const data = await response.json()
+    if (data.success) {
+      isFavorite.value = !isFavorite.value
+    }
+  } catch (error) {
+    console.error('Failed to toggle favorite:', error)
+  }
+}
 
 const handleRelationClick = (event, relation) => {
   if (relation.id) {
@@ -186,18 +297,10 @@ const updateScrollButtons = () => {
 const getTitle = (animeData) => animeData?.name || animeData?.title?.userPreferred || animeData?.title?.romaji || 'Без названия'
 const getImageUrl = (image) => image?.large || image?.medium || '/placeholder.jpg'
 const getBackgroundUrl = (animeData) => animeData?.banner || getImageUrl(animeData?.image)
-
 const getTypeLabel = (kind) => ({ tv: 'Сериал', tv_short: 'Сериал', movie: 'Фильм', ova: 'OVA', ona: 'ONA', special: 'Спешл', music: 'Музыка' }[kind] || kind)
 const getFormatLabel = (format) => getTypeLabel(format)
 const getStatusLabel = (status) => ({ ongoing: 'Онгоинг', completed: 'Завершено', announced: 'Анонс', cancelled: 'Отменено', hiatus: 'Пауза' }[status] || status)
-
-const getRelationTypeLabel = (type) => ({
-  SEQUEL: 'Сиквел', PREQUEL: 'Приквел', SIDE_STORY: 'Сайд-стори',
-  ALTERNATIVE: 'Альтернатива', ALTERNATIVE_SETTING: 'Альт. обстановка',
-  SPIN_OFF: 'Спин-офф', OTHER: 'Другое', PARENT: 'Родитель', CHARACTER: 'Персонаж',
-  SUMMARY: 'Обзор', FULL_STORY: 'Полная история'
-}[type] || 'Другое')
-
+const getRelationTypeLabel = (type) => ({ SEQUEL: 'Сиквел', PREQUEL: 'Приквел', SIDE_STORY: 'Сайд-стори', ALTERNATIVE: 'Альтернатива', ALTERNATIVE_SETTING: 'Альт. обстановка', SPIN_OFF: 'Спин-офф', OTHER: 'Другое', PARENT: 'Родитель', CHARACTER: 'Персонаж', SUMMARY: 'Обзор', FULL_STORY: 'Полная история' }[type] || 'Другое')
 const getRelationTypeClass = (type) => type?.toLowerCase().replace(/_/g, '-') || 'other'
 const formatDescription = (desc) => desc ? desc.replace(/<br>/g, '<br/>').replace(/\n/g, '<br/>') : 'Описание отсутствует'
 const onImageError = (e) => { e.target.src = '/placeholder.jpg'; e.target.onerror = null }
@@ -229,7 +332,8 @@ const onImageError = (e) => { e.target.src = '/placeholder.jpg'; e.target.onerro
 
 .poster-actions { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
 .action-btn { flex: 1; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 0.75rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.9rem; transition: all 0.3s ease; }
-.action-btn.primary { background: rgba(102, 126, 234, 0.2); border-color: #667eea; }
+.action-btn.active { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; }
+.action-btn.active .icon.filled { fill: #ef4444; color: #ef4444; }
 .action-btn:hover { background: rgba(102, 126, 234, 0.3); border-color: #667eea; }
 .icon { width: 18px; height: 18px; }
 
@@ -262,7 +366,6 @@ const onImageError = (e) => { e.target.src = '/placeholder.jpg'; e.target.onerro
 .description-block h3 { margin: 0 0 1rem 0; font-size: 1.5rem; }
 .description { line-height: 1.8; color: #cbd5e0; }
 
-/* RELATIONS SECTION */
 .relations-section { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .relations-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 .relations-header h3 { margin: 0; font-size: 1.5rem; color: #fff; }
@@ -297,7 +400,6 @@ const onImageError = (e) => { e.target.src = '/placeholder.jpg'; e.target.onerro
 .relation-score { display: flex; align-items: center; gap: 0.25rem; color: #ffd700; font-weight: 600; }
 .star-small { width: 12px; height: 12px; fill: currentColor; }
 
-/* Mobile */
 @media (max-width: 968px) {
   .details-content { grid-template-columns: 1fr; gap: 2rem; }
   .poster-section { position: relative; top: 0; max-width: 250px; margin: 0 auto; }
