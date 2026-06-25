@@ -26,9 +26,6 @@
             :alt="user.username"
             class="avatar"
           />
-          <button v-if="isOwnProfile" class="edit-avatar-btn" @click="showAvatarCropper = true">
-            <Camera class="icon" />
-          </button>
         </div>
         
         <div class="profile-info">
@@ -133,7 +130,9 @@
                 <div class="activity-info">
                   <p class="activity-text">
                     <strong>{{ getActionText(item.action) }}</strong>
-                    аниме #{{ item.animeId }}
+                    <router-link :to="`/anime/${item.animeId}`" class="anime-title-link">
+                      {{ item.animeTitle || `Аниме #${item.animeId}` }}
+                    </router-link>
                   </p>
                   <span class="activity-time">{{ formatRelativeTime(item.viewedAt) }}</span>
                 </div>
@@ -161,6 +160,9 @@
                   <span v-if="(activity.animeLists?.watching || []).length > 5" class="list-more">
                     +{{ (activity.animeLists?.watching || []).length - 5 }} ещё
                   </span>
+                  <div v-if="(activity.animeLists?.watching || []).length === 0" class="empty-list">
+                    Пусто
+                  </div>
                 </div>
               </div>
               
@@ -177,6 +179,9 @@
                   <span v-if="(activity.animeLists?.planned || []).length > 5" class="list-more">
                     +{{ (activity.animeLists?.planned || []).length - 5 }} ещё
                   </span>
+                  <div v-if="(activity.animeLists?.planned || []).length === 0" class="empty-list">
+                    Пусто
+                  </div>
                 </div>
               </div>
               
@@ -193,6 +198,9 @@
                   <span v-if="(activity.animeLists?.completed || []).length > 5" class="list-more">
                     +{{ (activity.animeLists?.completed || []).length - 5 }} ещё
                   </span>
+                  <div v-if="(activity.animeLists?.completed || []).length === 0" class="empty-list">
+                    Пусто
+                  </div>
                 </div>
               </div>
               
@@ -209,6 +217,9 @@
                   <span v-if="(activity.animeLists?.onHold || []).length > 5" class="list-more">
                     +{{ (activity.animeLists?.onHold || []).length - 5 }} ещё
                   </span>
+                  <div v-if="(activity.animeLists?.onHold || []).length === 0" class="empty-list">
+                    Пусто
+                  </div>
                 </div>
               </div>
               
@@ -225,6 +236,9 @@
                   <span v-if="(activity.animeLists?.dropped || []).length > 5" class="list-more">
                     +{{ (activity.animeLists?.dropped || []).length - 5 }} ещё
                   </span>
+                  <div v-if="(activity.animeLists?.dropped || []).length === 0" class="empty-list">
+                    Пусто
+                  </div>
                 </div>
               </div>
             </div>
@@ -268,10 +282,6 @@
       </div>
     </div>
     
-    <AvatarCropper 
-      v-model:show="showAvatarCropper"
-      @uploaded="handleAvatarUploaded"
-    />
     <AuthModal v-model="showAuth" @authenticated="handleAuthenticated" />
   </div>
 </template>
@@ -280,11 +290,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { 
-  Camera, Edit2, User, Activity, List, LogIn, Settings, Heart,
+  Edit2, User, Activity, List, LogIn, Settings, Heart,
   Calendar, Clock, Tv, CheckCircle, XCircle, PlayCircle, 
   PauseCircle
 } from 'lucide-vue-next'
-import AvatarCropper from '../components/AvatarCropper.vue'
 import AuthModal from '../components/AuthModal.vue'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://amakawe-backendd.vercel.app'
@@ -298,8 +307,8 @@ const activeTab = ref('about')
 const isOwnProfile = ref(false)
 const isLoggedIn = ref(false)
 const showEditModal = ref(false)
-const showAvatarCropper = ref(false)
 const showAuth = ref(false)
+const animeCache = ref({})
 
 const editForm = ref({
   username: '',
@@ -332,7 +341,6 @@ const fetchProfile = async () => {
     if (!token) {
       isLoggedIn.value = false
       loading.value = false
-      console.warn('No token found')
       return
     }
     
@@ -342,8 +350,6 @@ const fetchProfile = async () => {
       ? `${API_URL}/api/profile/${userId.value}`
       : `${API_URL}/api/profile/me`
     
-    console.log('Fetching profile from:', url)
-    
     const response = await fetch(url, { 
       headers: { 
         Authorization: `Bearer ${token}`,
@@ -352,7 +358,6 @@ const fetchProfile = async () => {
     })
     
     const data = await response.json()
-    console.log('Profile data:', data)
     
     if (data.success) {
       user.value = data.user
@@ -368,7 +373,6 @@ const fetchProfile = async () => {
       
       await fetchActivity()
     } else {
-      console.error('Profile fetch failed:', data.error)
       isLoggedIn.value = false
     }
   } catch (error) {
@@ -379,9 +383,30 @@ const fetchProfile = async () => {
   }
 }
 
+const fetchAnimeData = async (animeId) => {
+  if (animeCache.value[animeId]) {
+    return animeCache.value[animeId]
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/api/anime/${animeId}`)
+    if (response.ok) {
+      const data = await response.json()
+      animeCache.value[animeId] = data
+      return data
+    }
+  } catch (error) {
+    console.error(`Failed to fetch anime ${animeId}:`, error)
+  }
+  
+  return null
+}
+
 const fetchActivity = async () => {
   try {
     const token = localStorage.getItem('auth_token')
+    if (!token) return
+    
     const url = userId.value
       ? `${API_URL}/api/profile/${userId.value}/activity`
       : `${API_URL}/api/profile/me/activity`
@@ -393,6 +418,20 @@ const fetchActivity = async () => {
     
     if (data.success) {
       activity.value = data.activity
+
+      if (activity.value.history) {
+        const recentActions = activity.value.history.slice(0, 10)
+        await Promise.all(
+          recentActions.map(async (item) => {
+            if (!item.animeTitle) {
+              const animeData = await fetchAnimeData(item.animeId)
+              if (animeData) {
+                item.animeTitle = animeData.name || animeData.title?.userPreferred || `Аниме #${item.animeId}`
+              }
+            }
+          })
+        )
+      }
     }
   } catch (error) {
     console.error('Failed to fetch activity:', error)
@@ -427,15 +466,6 @@ const updateProfile = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const handleAvatarUploaded = (avatarUrl) => {
-  user.value.avatar = avatarUrl
-  const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
-  localStorage.setItem('user', JSON.stringify({
-    ...storedUser,
-    avatar: avatarUrl
-  }))
 }
 
 const handleAuthenticated = (userData) => {
@@ -570,27 +600,6 @@ onMounted(() => {
   border: 4px solid #1a1a2e;
   object-fit: cover;
   background: #1a1a2e;
-}
-
-.edit-avatar-btn {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #667eea;
-  border: none;
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-
-.edit-avatar-btn:hover {
-  background: #764ba2;
 }
 
 .profile-info {
@@ -815,6 +824,16 @@ onMounted(() => {
   color: #718096;
 }
 
+.anime-title-link {
+  color: #667eea;
+  text-decoration: none;
+  margin-left: 0.25rem;
+}
+
+.anime-title-link:hover {
+  text-decoration: underline;
+}
+
 .lists-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -883,6 +902,12 @@ onMounted(() => {
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   color: #718096;
+}
+
+.empty-list {
+  color: #718096;
+  font-size: 0.875rem;
+  padding: 0.5rem;
 }
 
 .favorites-grid {

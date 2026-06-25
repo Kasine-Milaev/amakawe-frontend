@@ -137,13 +137,11 @@ const loadMore = async () => {
       hasMore.value = newAnime.length >= 50
     }
     
-    console.log('📊 Loaded:', animeList.value.length, 'Total:', totalItems.value, 'Has more:', hasMore.value)
-    
     if (hasMore.value) {
       currentPage.value++
     }
   } catch (err) {
-    console.error('❌ Load error:', err)
+    console.error('Load error:', err)
     errorMessage.value = 'Ошибка при загрузке: ' + err.message
   } finally {
     loading.value = false
@@ -179,7 +177,6 @@ const setupInfiniteScroll = () => {
 }
 
 onMounted(() => {
-  console.log('🎬 GenreFilterView mounted:', route.path)
   currentPage.value = 1
   animeList.value = []
   hasMore.value = true
@@ -192,7 +189,6 @@ onMounted(() => {
 })
 
 watch(() => route.fullPath, () => {
-  console.log('🔄 Route changed:', route.fullPath)
   currentPage.value = 1
   animeList.value = []
   hasMore.value = true
