@@ -21,49 +21,49 @@
           <span>Рандом</span>
         </router-link>
 
-        <div class="dropdown" ref="dropdownRef">
-          <button class="nav-item dropdown-toggle" @click.stop="toggleMoreMenu">
-            <MoreHorizontal class="icon" />
-          </button>
-          
-          <Transition name="dropdown">
-            <div v-if="showMoreMenu" class="dropdown-menu">
-              <router-link to="/genres" class="dropdown-item" @click="showMoreMenu = false">
-                <Tags class="icon-small" />
-                Жанры
-              </router-link>
-              <router-link to="/type/tv" class="dropdown-item" @click="showMoreMenu = false">
-                <Tv class="icon-small" />
-                Сериалы
-              </router-link>
-              <router-link to="/type/movie" class="dropdown-item" @click="showMoreMenu = false">
-                <Film class="icon-small" />
-                Фильмы
-              </router-link>
-              <router-link to="/type/ova" class="dropdown-item" @click="showMoreMenu = false">
-                <Disc class="icon-small" />
-                OVA
-              </router-link>
-              <router-link to="/type/ona" class="dropdown-item" @click="showMoreMenu = false">
-                <Globe class="icon-small" />
-                ONA
-              </router-link>
-              <router-link to="/type/special" class="dropdown-item" @click="showMoreMenu = false">
-                <Star class="icon-small" />
-                Спешлы
-              </router-link>
-              <div class="dropdown-divider"></div>
-              <router-link to="/popular" class="dropdown-item" @click="showMoreMenu = false">
-                <TrendingUp class="icon-small" />
-                Популярное
-              </router-link>
-              <router-link to="/schedule" class="dropdown-item" @click="showMoreMenu = false">
-                <Calendar class="icon-small" />
-                Расписание
-              </router-link>
-            </div>
-          </Transition>
-        </div>
+        <div class="dropdown" ref="dropdownRef" @click.stop>
+  <button class="nav-item dropdown-toggle" @click.stop="toggleMoreMenu">
+    <MoreHorizontal class="icon" />
+  </button>
+  
+  <Transition name="dropdown">
+    <div v-if="showMoreMenu" class="dropdown-menu" @click.stop>
+      <router-link to="/genres" class="dropdown-item">
+        <Tags class="icon-small" />
+        Жанры
+      </router-link>
+      <router-link to="/type/tv" class="dropdown-item">
+        <Tv class="icon-small" />
+        Сериалы
+      </router-link>
+      <router-link to="/type/movie" class="dropdown-item">
+        <Film class="icon-small" />
+        Фильмы
+      </router-link>
+      <router-link to="/type/ova" class="dropdown-item">
+        <Disc class="icon-small" />
+        OVA
+      </router-link>
+      <router-link to="/type/ona" class="dropdown-item">
+        <Globe class="icon-small" />
+        ONA
+      </router-link>
+      <router-link to="/type/special" class="dropdown-item">
+        <Star class="icon-small" />
+        Спешлы
+      </router-link>
+      <div class="dropdown-divider"></div>
+      <router-link to="/popular" class="dropdown-item">
+        <TrendingUp class="icon-small" />
+        Популярное
+      </router-link>
+      <router-link to="/schedule" class="dropdown-item">
+        <Calendar class="icon-small" />
+        Расписание
+      </router-link>
+    </div>
+  </Transition>
+</div>
       </div>
 
       <div class="nav-right">
@@ -233,7 +233,6 @@ const currentUser = ref(null)
 const showUserMenu = ref(false)
 const showMoreMenu = ref(false)
 const userMenuRef = ref(null)
-const dropdownRef = ref(null)
 
 const toggleSearch = () => {
   showSearch.value = !showSearch.value
@@ -288,6 +287,7 @@ const handleLogout = () => {
   
   currentUser.value = null
   showUserMenu.value = false
+  showMoreMenu.value = false
   
   window.location.href = '/'
 }
@@ -328,10 +328,13 @@ onMounted(async () => {
     }
   }
   
+
   document.addEventListener('click', (e) => {
+
     if (userMenuRef.value && !userMenuRef.value.contains(e.target)) {
       showUserMenu.value = false
     }
+
     if (dropdownRef.value && !dropdownRef.value.contains(e.target)) {
       showMoreMenu.value = false
     }
