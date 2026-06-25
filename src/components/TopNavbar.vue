@@ -79,8 +79,8 @@
           
           <div v-else class="user-menu-wrapper" ref="userMenuRef">
             <button class="user-avatar-wrapper" @click="toggleUserMenu">
-              <div class="avatar" v-if="currentUser.photo_url">
-                <img :src="currentUser.photo_url" :alt="currentUser.username" class="avatar-img" />
+              <div class="avatar" v-if="currentUser.avatar || currentUser.photo_url">
+                <img :src="currentUser.avatar || currentUser.photo_url" :alt="currentUser.username" class="avatar-img" />
               </div>
               <div class="avatar" v-else>
                 <User class="avatar-icon" />
@@ -92,8 +92,8 @@
             <Transition name="dropdown">
               <div v-if="showUserMenu" class="user-dropdown-menu">
                 <div class="dropdown-header">
-                  <div class="avatar" v-if="currentUser.photo_url">
-                    <img :src="currentUser.photo_url" :alt="currentUser.username" class="avatar-img" />
+                  <div class="avatar" v-if="currentUser.avatar || currentUser.photo_url">
+                    <img :src="currentUser.avatar || currentUser.photo_url" :alt="currentUser.username" class="avatar-img" />
                   </div>
                   <div class="avatar" v-else>
                     <User class="avatar-icon" />
@@ -148,6 +148,7 @@
         </div>
       </div>
     </div>
+
     <Teleport to="body">
       <Transition name="search-modal">
         <div v-if="showSearch" class="search-modal-overlay" @click="toggleSearch">
