@@ -13,6 +13,7 @@ import RulesView from '../views/static/RulesView.vue'
 import PrivacyView from '../views/static/PrivacyView.vue'
 import ContactsView from '../views/static/ContactsView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import SettingsView from '../views/SettingsView.vue'
 
 const routes = [
   {
@@ -91,6 +92,12 @@ const routes = [
     path: '/profile/:id',
     name: 'profile-public',
     component: ProfileView
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: SettingsView,
+    meta: { requiresAuth: true }
   }
 ]
 
