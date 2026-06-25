@@ -21,8 +21,8 @@
           <span>Рандом</span>
         </router-link>
 
-        <div class="dropdown">
-          <button class="nav-item dropdown-toggle" @click="toggleMoreMenu">
+        <div class="dropdown" @mouseenter="showMoreMenu = true" @mouseleave="showMoreMenu = false">
+          <button class="nav-item dropdown-toggle">
             <MoreHorizontal class="icon" />
           </button>
           
@@ -277,17 +277,12 @@ const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value
 }
 
-const toggleMoreMenu = () => {
-  showMoreMenu.value = !showMoreMenu.value
-}
-
 const handleLogout = () => {
   localStorage.removeItem('auth_token')
   localStorage.removeItem('user')
   
   currentUser.value = null
   showUserMenu.value = false
-  showMoreMenu.value = false
   
   window.location.href = '/'
 }
@@ -331,9 +326,6 @@ onMounted(async () => {
   document.addEventListener('click', (e) => {
     if (userMenuRef.value && !userMenuRef.value.contains(e.target)) {
       showUserMenu.value = false
-    }
-    if (!e.target.closest('.dropdown')) {
-      showMoreMenu.value = false
     }
   })
 })
