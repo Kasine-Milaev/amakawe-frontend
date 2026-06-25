@@ -22,35 +22,47 @@
         </router-link>
 
         <div class="dropdown">
-          <button class="nav-item dropdown-toggle">
+          <button class="nav-item dropdown-toggle" @click="toggleMoreMenu">
             <MoreHorizontal class="icon" />
           </button>
-          <div class="dropdown-menu">
-            <router-link to="/genres" class="dropdown-item">
-              <Tags class="icon-small" />
-              Жанры
-            </router-link>
-            <router-link to="/type/tv" class="dropdown-item">
-              <Tv class="icon-small" />
-              Сериалы
-            </router-link>
-            <router-link to="/type/movie" class="dropdown-item">
-              <Film class="icon-small" />
-              Фильмы
-            </router-link>
-            <router-link to="/type/ova" class="dropdown-item">
-              <Disc class="icon-small" />
-              OVA
-            </router-link>
-            <router-link to="/type/ona" class="dropdown-item">
-              <Globe class="icon-small" />
-              ONA
-            </router-link>
-            <router-link to="/type/special" class="dropdown-item">
-              <Star class="icon-small" />
-              Спешлы
-            </router-link>
-          </div>
+          
+          <Transition name="dropdown">
+            <div v-if="showMoreMenu" class="dropdown-menu">
+              <router-link to="/genres" class="dropdown-item">
+                <Tags class="icon-small" />
+                Жанры
+              </router-link>
+              <router-link to="/type/tv" class="dropdown-item">
+                <Tv class="icon-small" />
+                Сериалы
+              </router-link>
+              <router-link to="/type/movie" class="dropdown-item">
+                <Film class="icon-small" />
+                Фильмы
+              </router-link>
+              <router-link to="/type/ova" class="dropdown-item">
+                <Disc class="icon-small" />
+                OVA
+              </router-link>
+              <router-link to="/type/ona" class="dropdown-item">
+                <Globe class="icon-small" />
+                ONA
+              </router-link>
+              <router-link to="/type/special" class="dropdown-item">
+                <Star class="icon-small" />
+                Спешлы
+              </router-link>
+              <div class="dropdown-divider"></div>
+              <router-link to="/popular" class="dropdown-item">
+                <TrendingUp class="icon-small" />
+                Популярное
+              </router-link>
+              <router-link to="/schedule" class="dropdown-item">
+                <Calendar class="icon-small" />
+                Расписание
+              </router-link>
+            </div>
+          </Transition>
         </div>
       </div>
 
@@ -136,7 +148,6 @@
         </div>
       </div>
     </div>
-
     <Teleport to="body">
       <Transition name="search-modal">
         <div v-if="showSearch" class="search-modal-overlay" @click="toggleSearch">
@@ -201,7 +212,9 @@ import {
   ChevronDown,
   History,
   List,
-  Settings
+  Settings,
+  TrendingUp,
+  Calendar
 } from 'lucide-vue-next'
 import { tg, initTelegram } from '../plugins/telegram'
 import { authService } from '../services/auth'
@@ -217,6 +230,7 @@ const tgUser = ref(null)
 const showAuth = ref(false)
 const currentUser = ref(null)
 const showUserMenu = ref(false)
+const showMoreMenu = ref(false)
 const userMenuRef = ref(null)
 
 const toggleSearch = () => {
@@ -262,26 +276,19 @@ const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value
 }
 
+const toggleMoreMenu = () => {
+  showMoreMenu.value = !showMoreMenu.value
+}
+
 const handleLogout = () => {
   localStorage.removeItem('auth_token')
   localStorage.removeItem('user')
   
   currentUser.value = null
-  
   showUserMenu.value = false
-
-  import('vue').then(({ useRouter }) => {
-    const router = useRouter()
-    router.push('/').catch(() => {
-      window.location.href = '/'
-    })
-  }).catch(() => {
-    window.location.href = '/'
-  })
+  showMoreMenu.value = false
   
-  setTimeout(() => {
-    window.dispatchEvent(new Event('storage'))
-  }, 100)
+  window.location.href = '/'
 }
 
 watch(searchInput, async (newVal) => {
@@ -324,6 +331,9 @@ onMounted(async () => {
     if (userMenuRef.value && !userMenuRef.value.contains(e.target)) {
       showUserMenu.value = false
     }
+    if (!e.target.closest('.dropdown')) {
+      showMoreMenu.value = false
+    }
   })
 })
 </script>
@@ -337,14 +347,14 @@ onMounted(async () => {
   z-index: 1000;
   background: rgba(15, 15, 30, 0.95);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .navbar-container {
-  max-width: 1400px;
+  max-width: 1920px;
   margin: 0 auto;
   padding: 0 2rem;
-  height: 70px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -355,7 +365,7 @@ onMounted(async () => {
 }
 
 .logo-text {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: 800;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
@@ -365,7 +375,7 @@ onMounted(async () => {
 
 .nav-menu {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
   align-items: center;
 }
 
@@ -373,12 +383,13 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1.2rem;
-  border-radius: 12px;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
   text-decoration: none;
   color: #a0aec0;
   font-weight: 500;
-  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
   cursor: pointer;
   border: none;
   background: transparent;
@@ -386,66 +397,91 @@ onMounted(async () => {
 
 .nav-item:hover,
 .nav-item.router-link-active {
-  background: rgba(102, 126, 234, 0.15);
+  background: rgba(102, 126, 234, 0.1);
   color: #fff;
 }
 
 .icon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .dropdown {
   position: relative;
 }
 
+.dropdown-toggle {
+  padding: 0.5rem 0.6rem;
+}
+
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 8px);
   right: 0;
   background: rgba(20, 20, 35, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 0.5rem;
-  min-width: 220px;
+  min-width: 200px;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px);
-  transition: all 0.3s ease;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
 }
 
-.dropdown:hover .dropdown-menu {
+.dropdown-menu.dropdown-enter-active,
+.dropdown-menu.dropdown-leave-active {
+  transition: all 0.2s ease;
+}
+
+.dropdown-menu.dropdown-enter-from,
+.dropdown-menu.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+  visibility: hidden;
+}
+
+.dropdown-menu.dropdown-enter-to,
+.dropdown-menu.dropdown-leave-from {
   opacity: 1;
-  visibility: visible;
   transform: translateY(0);
+  visibility: visible;
 }
 
 .dropdown-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  padding: 0.625rem 0.875rem;
   border-radius: 8px;
   text-decoration: none;
   color: #a0aec0;
   transition: all 0.2s ease;
+  font-size: 0.9rem;
 }
 
 .dropdown-item:hover {
-  background: rgba(102, 126, 234, 0.15);
+  background: rgba(102, 126, 234, 0.1);
   color: #fff;
 }
 
+.dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  margin: 0.5rem 0;
+}
+
 .icon-small {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .search-btn {
@@ -455,16 +491,19 @@ onMounted(async () => {
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 8px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .search-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   color: #fff;
 }
 
 .user-profile {
-  margin-left: 0.5rem;
+  margin-left: 0.25rem;
   position: relative;
 }
 
@@ -475,17 +514,17 @@ onMounted(async () => {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
   color: #fff;
-  padding: 0.6rem 1.2rem;
-  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .login-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .user-menu-wrapper {
@@ -496,24 +535,61 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.4rem 0.75rem;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.375rem 0.625rem;
+  padding-right: 0.5rem;
+  border-radius: 20px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .user-avatar-wrapper:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(102, 126, 234, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar-icon {
+  width: 16px;
+  height: 16px;
+  color: #667eea;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.username {
+  font-size: 0.875rem;
+  color: #e2e8f0;
+  font-weight: 500;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dropdown-icon {
-  width: 16px;
-  height: 16px;
-  color: #718096;
-  transition: transform 0.3s ease;
+  width: 14px;
+  height: 14px;
+  color: #4a5568;
+  transition: transform 0.2s ease;
+  opacity: 0.5;
 }
 
 .dropdown-icon.open {
@@ -522,14 +598,14 @@ onMounted(async () => {
 
 .user-dropdown-menu {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 8px);
   right: 0;
   background: rgba(20, 20, 35, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   min-width: 280px;
   padding: 0.75rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   z-index: 1001;
 }
 
@@ -538,7 +614,7 @@ onMounted(async () => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(102, 126, 234, 0.08);
   border-radius: 10px;
   margin-bottom: 0.5rem;
 }
@@ -547,24 +623,29 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .header-username {
   font-weight: 600;
   color: #fff;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-stats {
   display: flex;
-  gap: 0.75rem;
-  font-size: 0.8rem;
+  gap: 0.5rem;
+  font-size: 0.75rem;
   color: #718096;
 }
 
 .dropdown-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   margin: 0.5rem 0;
 }
 
@@ -572,7 +653,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  padding: 0.625rem 0.875rem;
   border-radius: 8px;
   text-decoration: none;
   color: #a0aec0;
@@ -581,18 +662,19 @@ onMounted(async () => {
   border: none;
   width: 100%;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
+  text-align: left;
 }
 
 .dropdown-item:hover {
-  background: rgba(102, 126, 234, 0.15);
+  background: rgba(102, 126, 234, 0.1);
   color: #fff;
 }
 
 .dropdown-item .dropdown-icon {
-  width: 18px;
-  height: 18px;
-  color: #718096;
+  width: 16px;
+  height: 16px;
+  color: #4a5568;
 }
 
 .dropdown-item:hover .dropdown-icon {
@@ -604,12 +686,11 @@ onMounted(async () => {
 }
 
 .logout-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .logout-btn .dropdown-icon {
-  color: #fca5a5;
+  color: #ef4444;
 }
 
 .dropdown-enter-active,
@@ -621,46 +702,6 @@ onMounted(async () => {
 .dropdown-leave-to {
   opacity: 0;
   transform: translateY(-10px);
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-  overflow: hidden;
-}
-
-.avatar:hover {
-  transform: scale(1.05);
-}
-
-.avatar-icon {
-  width: 22px;
-  height: 22px;
-  color: #fff;
-}
-
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.username {
-  position: absolute;
-  bottom: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.7rem;
-  color: #a0aec0;
-  white-space: nowrap;
 }
 
 .search-modal-overlay {
@@ -761,5 +802,42 @@ onMounted(async () => {
 .search-modal-enter-from,
 .search-modal-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 1024px) {
+  .navbar-container {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+  
+  .nav-menu {
+    gap: 0;
+  }
+  
+  .nav-item span {
+    display: none;
+  }
+  
+  .nav-item {
+    padding: 0.5rem;
+  }
+  
+  .username {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-container {
+    height: 56px;
+  }
+  
+  .logo-text {
+    font-size: 1.3rem;
+  }
+  
+  .nav-menu {
+    display: none;
+  }
 }
 </style>
