@@ -22,35 +22,47 @@
         </router-link>
 
         <div class="dropdown">
-          <button class="nav-item dropdown-toggle">
+          <button class="nav-item dropdown-toggle" @click="toggleMoreMenu">
             <MoreHorizontal class="icon" />
           </button>
-          <div class="dropdown-menu">
-            <router-link to="/genres" class="dropdown-item">
-              <Tags class="icon-small" />
-              Жанры
-            </router-link>
-            <router-link to="/type/tv" class="dropdown-item">
-              <Tv class="icon-small" />
-              Сериалы
-            </router-link>
-            <router-link to="/type/movie" class="dropdown-item">
-              <Film class="icon-small" />
-              Фильмы
-            </router-link>
-            <router-link to="/type/ova" class="dropdown-item">
-              <Disc class="icon-small" />
-              OVA
-            </router-link>
-            <router-link to="/type/ona" class="dropdown-item">
-              <Globe class="icon-small" />
-              ONA
-            </router-link>
-            <router-link to="/type/special" class="dropdown-item">
-              <Star class="icon-small" />
-              Спешлы
-            </router-link>
-          </div>
+          
+          <Transition name="dropdown">
+            <div v-if="showMoreMenu" class="dropdown-menu">
+              <router-link to="/genres" class="dropdown-item">
+                <Tags class="icon-small" />
+                Жанры
+              </router-link>
+              <router-link to="/type/tv" class="dropdown-item">
+                <Tv class="icon-small" />
+                Сериалы
+              </router-link>
+              <router-link to="/type/movie" class="dropdown-item">
+                <Film class="icon-small" />
+                Фильмы
+              </router-link>
+              <router-link to="/type/ova" class="dropdown-item">
+                <Disc class="icon-small" />
+                OVA
+              </router-link>
+              <router-link to="/type/ona" class="dropdown-item">
+                <Globe class="icon-small" />
+                ONA
+              </router-link>
+              <router-link to="/type/special" class="dropdown-item">
+                <Star class="icon-small" />
+                Спешлы
+              </router-link>
+              <div class="dropdown-divider"></div>
+              <router-link to="/popular" class="dropdown-item">
+                <TrendingUp class="icon-small" />
+                Популярное
+              </router-link>
+              <router-link to="/schedule" class="dropdown-item">
+                <Calendar class="icon-small" />
+                Расписание
+              </router-link>
+            </div>
+          </Transition>
         </div>
       </div>
 
@@ -201,7 +213,9 @@ import {
   ChevronDown,
   History,
   List,
-  Settings
+  Settings,
+  TrendingUp,
+  Calendar
 } from 'lucide-vue-next'
 import { tg, initTelegram } from '../plugins/telegram'
 import { authService } from '../services/auth'
@@ -217,6 +231,7 @@ const tgUser = ref(null)
 const showAuth = ref(false)
 const currentUser = ref(null)
 const showUserMenu = ref(false)
+const showMoreMenu = ref(false)
 const userMenuRef = ref(null)
 
 const toggleSearch = () => {
@@ -262,26 +277,19 @@ const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value
 }
 
+const toggleMoreMenu = () => {
+  showMoreMenu.value = !showMoreMenu.value
+}
+
 const handleLogout = () => {
   localStorage.removeItem('auth_token')
   localStorage.removeItem('user')
   
   currentUser.value = null
-  
   showUserMenu.value = false
-
-  import('vue').then(({ useRouter }) => {
-    const router = useRouter()
-    router.push('/').catch(() => {
-      window.location.href = '/'
-    })
-  }).catch(() => {
-    window.location.href = '/'
-  })
+  showMoreMenu.value = false
   
-  setTimeout(() => {
-    window.dispatchEvent(new Event('storage'))
-  }, 100)
+  window.location.href = '/'
 }
 
 watch(searchInput, async (newVal) => {
@@ -323,6 +331,9 @@ onMounted(async () => {
   document.addEventListener('click', (e) => {
     if (userMenuRef.value && !userMenuRef.value.contains(e.target)) {
       showUserMenu.value = false
+    }
+    if (!e.target.closest('.dropdown')) {
+      showMoreMenu.value = false
     }
   })
 })
@@ -399,6 +410,10 @@ onMounted(async () => {
   position: relative;
 }
 
+.dropdown-toggle {
+  padding: 0.6rem 0.8rem;
+}
+
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 10px);
@@ -411,14 +426,28 @@ onMounted(async () => {
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px);
-  transition: all 0.3s ease;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
 }
 
-.dropdown:hover .dropdown-menu {
+.dropdown-menu.dropdown-enter-active,
+.dropdown-menu.dropdown-leave-active {
+  transition: all 0.2s ease;
+}
+
+.dropdown-menu.dropdown-enter-from,
+.dropdown-menu.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+  visibility: hidden;
+}
+
+.dropdown-menu.dropdown-enter-to,
+.dropdown-menu.dropdown-leave-from {
   opacity: 1;
-  visibility: visible;
   transform: translateY(0);
+  visibility: visible;
 }
 
 .dropdown-item {
@@ -435,6 +464,12 @@ onMounted(async () => {
 .dropdown-item:hover {
   background: rgba(102, 126, 234, 0.15);
   color: #fff;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0.5rem 0;
 }
 
 .icon-small {
